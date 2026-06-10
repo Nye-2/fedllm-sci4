@@ -3,10 +3,33 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "fedllm-data-prep"
-version = "0.1.0"
-description = "Reproducible dataset preparation utilities for SPECTRA-FedCore experiments."
+name = "spectra-fedcore"
+version = "0.2.0"
+description = "Reproducible data preparation and public-spectral DP federated core adaptation utilities for SPECTRA-FedCore experiments."
 requires-python = ">=3.10"
+readme = "README.md"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8",
+  "pytest-cov>=5",
+  "ruff>=0.5",
+]
+exp = [
+  "numpy>=1.24",
+  "scikit-learn>=1.4",
+  "torch>=2.2",
+  "transformers>=4.44",
+  "peft>=0.12",
+  "accelerate>=0.33",
+  "datasets>=2.20",
+  "opacus>=1.5",
+  "xgboost>=2.0",
+  "lightgbm>=4.0",
+  "matplotlib>=3.8",
+  "pyyaml>=6.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -14,3 +37,11 @@ where = ["src"]
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
+markers = [
+  "slow: marks tests that are slower than regular unit tests",
+  "gpu: marks tests that require a CUDA-capable GPU",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
