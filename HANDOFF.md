@@ -147,27 +147,94 @@ python -m pytest -q
 
 **注意**：`data/raw/` 和 `data/external/` 被 `.gitignore` 排除，未提交到 git。服务器端需要自行准备。
 
-#### Edge-IIoTset
+当前本地机器已经准备好这些未提交的大文件：
 
-已在本地准备好。迁移到服务器的方式二选一：
+```text
+data/raw/edgeiiotset/   about 8.5G
+data/raw/snli/          about 947M
+data/external/fed-sb/   about 194M
+```
 
-- **方式 A**：直接从本地 `data/raw/edgeiiotset/` 打包 SCP 到服务器：
-  ```bash
-  # 在本地执行
-  tar czf edgeiiotset_raw.tar.gz -C /path/to/local/fedllm-sci4/data/raw edgeiiotset
-  scp edgeiiotset_raw.tar.gz <server>:~/fedllm-sci4/data/raw/
-  # 在服务器执行
-  cd ~/fedllm-sci4/data/raw && tar xzf edgeiiotset_raw.tar.gz
-  ```
+推荐顺序：
 
-- **方式 B**：服务器上从 Kaggle 重新下载（需 Kaggle API key）：
-  ```bash
-  pip install kagglehub
-  python3 -c "import kagglehub; kagglehub.dataset_download('mohamedamineferrag/edgeiiotset-cyber-security-dataset-of-iot-iiot')"
-  ```
-  下载后解压到 `data/raw/edgeiiotset/full/`。
+1. **优先从本地传到服务器**：最快、最可控，避免服务器重新下载 Kaggle 大文件失败。
+2. **如果传输不方便，再让服务器自行下载**：需要 Kaggle/NLP Stanford/GitHub 网络可用。
 
-#### SNLI
+#### 方式 A：从本地打包传输（推荐）
+
+在本地仓库根目录执行：
+
+```bash
+cd /path/to/local/fedllm-sci4
+
+tar czf edgeiiotset_raw.tar.gz -C data/raw edgeiiotset
+tar czf snli_raw.tar.gz -C data/raw snli
+
+scp edgeiiotset_raw.tar.gz snli_raw.tar.gz <server>:~/fedllm-sci4/
+```
+
+在服务器仓库根目录执行：
+
+```bash
+cd ~/fedllm-sci4
+
+mkdir -p data/raw
+tar xzf edgeiiotset_raw.tar.gz -C data/raw
+tar xzf snli_raw.tar.gz -C data/raw
+
+# 保险起见，重建常用 symlink
+ln -sfn "full/Edge-IIoTset dataset" data/raw/edgeiiotset/full_dataset
+ln -sfn snli_1.0 data/raw/snli/current
+```
+
+Fed-SB 基线代码建议服务器直接 clone，避免传 `.git` 大目录：
+
+```bash
+mkdir -p data/external
+git clone https://github.com/CERT-Lab/fed-sb.git data/external/fed-sb
+cd data/external/fed-sb
+git checkout e9e649822ce63437535f72fbf06c146a22b9e527
+cd ../../..
+
+mkdir -p data/external/fed-sb/fed_sb/DP/SNLI/data
+ln -sfn ../../../../../../raw/snli/snli_1.0 \
+  data/external/fed-sb/fed_sb/DP/SNLI/data/snli_1.0
+```
+
+如果服务器不能访问 GitHub，也可以本地打包 Fed-SB：
+
+```bash
+# 本地仓库根目录
+tar czf fedsb_external.tar.gz -C data/external fed-sb
+scp fedsb_external.tar.gz <server>:~/fedllm-sci4/
+
+# 服务器仓库根目录
+mkdir -p data/external
+tar xzf fedsb_external.tar.gz -C data/external
+```
+
+#### 方式 B：服务器自行下载（备选）
+
+Edge-IIoTset：
+
+```bash
+pip install kagglehub
+python3 -c "import kagglehub; kagglehub.dataset_download('mohamedamineferrag/edgeiiotset-cyber-security-dataset-of-iot-iiot')"
+```
+
+下载后必须解压 CSV/PDF/README 到：
+
+```text
+data/raw/edgeiiotset/full/
+```
+
+并建立：
+
+```bash
+ln -sfn "full/Edge-IIoTset dataset" data/raw/edgeiiotset/full_dataset
+```
+
+SNLI：
 
 ```bash
 mkdir -p data/raw/snli
@@ -178,7 +245,7 @@ ln -s snli_1.0 current
 cd ../../..
 ```
 
-#### Fed-SB 基线代码
+Fed-SB：
 
 ```bash
 git clone https://github.com/CERT-Lab/fed-sb.git data/external/fed-sb
@@ -189,6 +256,34 @@ git checkout e9e649822ce63437535f72fbf06c146a22b9e527  # 已验证的 commit
 mkdir -p fed_sb/DP/SNLI/data
 ln -s ../../../../../../raw/snli/snli_1.0 fed_sb/DP/SNLI/data/snli_1.0
 cd ../../..
+```
+
+#### 数据完整性验证
+
+服务器端数据准备完成后，必须先跑这些检查：
+
+```bash
+cd ~/fedllm-sci4
+
+test -d data/raw/edgeiiotset/full_dataset
+test -d data/raw/snli/current
+test -d data/external/fed-sb
+
+find -L data/raw/edgeiiotset/full_dataset -name "*.csv" | wc -l
+wc -l "data/raw/edgeiiotset/full_dataset/Selected dataset for ML and DL/ML-EdgeIIoT-dataset.csv"
+wc -l "data/raw/edgeiiotset/full_dataset/Selected dataset for ML and DL/DNN-EdgeIIoT-dataset.csv"
+wc -l data/raw/snli/current/snli_1.0_train.jsonl
+wc -l data/raw/snli/current/snli_1.0_dev.jsonl
+wc -l data/raw/snli/current/snli_1.0_test.jsonl
+```
+
+期望结果：
+
+```text
+Edge-IIoT CSV count: 26
+ML-EdgeIIoT-dataset.csv: 157,801 lines
+DNN-EdgeIIoT-dataset.csv: 2,219,202 lines
+SNLI train/dev/test: 550,152 / 10,000 / 10,000 lines
 ```
 
 ### 4.5 重新生成数据产物（可选）
