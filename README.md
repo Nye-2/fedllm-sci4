@@ -57,7 +57,8 @@ Main paper protocol:
 Minimum paper comparison:
 
 - classical IDS context: Random Forest, XGBoost/LightGBM, MLP
-- adapter baselines: Prompt-only Qwen3.5-2B, Central LoRA, FedAvg-LoRA, Fed-SB-style fixed-core
+- adapter baselines: Prompt-only Qwen3.5-2B, Central LoRA, FedAvg-LoRA, FedAvg-LoRA-DP/DP-LoRA-style, Fed-SB-style fixed-core
 - method variants: SPECTRA-Core non-DP, SPECTRA-FedCore DP, and the A0-A5 utility-recovery ablation
+- optional external validation: WUSTL-IIOT-2021 only after the main Edge-IIoTset P0/P1 tables are stable
 
 The method novelty should be framed around public-backbone spectral bases, budget-aware rank/noise allocation, and client-side DP utility recovery. Do not claim that training a square core alone is novel; Fed-SB is the closest baseline and must be evaluated seriously. See the final protocol before launching GPU runs.

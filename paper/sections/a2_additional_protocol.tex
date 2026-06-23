@@ -9,10 +9,12 @@ The recommended execution order is:
   \item load Qwen3.5-2B, inspect target module names, and confirm text-only prompt formatting;
   \item run prompt-only and local non-DP \core{} smoke tests on \dataset{};
   \item run a 3--5 round non-DP FL smoke test;
-  \item run the P0 main methods, including FedAvg-LoRA-DP, Fed-SB-style-DP, and \method{}-DP for $\epsilon\in\{8,4,2\}$;
+  \item run a one-seed DP accountant smoke test at $\epsilon=4$ and verify privacy ledgers plus clipping-rate logs;
+  \item run the one-seed P0 screen, including FedAvg-LoRA-DP/DP-LoRA-style, Fed-SB-style-DP, and \method{}-DP for $\epsilon\in\{8,4,2\}$;
   \item run the A0--A5 utility-recovery ablations at $\epsilon=4$;
+  \item freeze hyperparameters and launch final three-seed P0/P1 reruns;
   \item run classical IDS context, diagnostics, robustness, and optional P2 sensitivity checks.
 \end{enumerate}
 
 \subsection{Result Logging Contract}
-Each run should export a machine-readable result file containing method name, experiment tier, seed, split id, client partition id, Qwen3.5-2B checkpoint or revision, model source, input modality, adapter target modules, trainable parameter count, uploaded MB per round, total transmitted MB, privacy ledger path, final macro-F1, balanced accuracy, per-class recall, rare attack recall, peak VRAM, wall-clock time, prompt length statistics, label extraction failure rate, and inference latency.
+Each run should export a machine-readable result file containing method name, experiment tier, table id, seed, split id, client partition id, dataset protocol id, baseline source, budget-match type, Qwen3.5-2B checkpoint or revision, model source, input modality, adapter target modules, trainable parameter count, uploaded MB per round, total transmitted MB, privacy ledger path, preprocessing fingerprint, final macro-F1, balanced accuracy, per-class recall, rare attack recall, peak VRAM, wall-clock time, prompt length statistics, label extraction failure rate, and inference latency.

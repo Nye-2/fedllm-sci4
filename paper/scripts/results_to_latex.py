@@ -22,6 +22,7 @@ PRIMARY_FIELDS = [
     "balanced_accuracy",
     "rare_attack_recall",
     "uploaded_mb_per_client_round",
+    "total_uploaded_mb",
     "trainable_params",
 ]
 
@@ -84,9 +85,9 @@ def make_table(records: list[dict[str, Any]], precision: int) -> str:
         grouped[key].append(record)
 
     lines = [
-        r"\begin{tabular}{lcccccc}",
+        r"\begin{tabular}{lccccccc}",
         r"\toprule",
-        r"Method & $\epsilon$ & Macro-F1 & Bal. Acc. & Rare Recall & MB/round & Trainable Params \\",
+        r"Method & $\epsilon$ & Macro-F1 & Bal. Acc. & Rare Recall & MB/round & Total MB & Trainable Params \\",
         r"\midrule",
     ]
     for (method, epsilon), group in sorted(grouped.items(), key=lambda item: (item[0][0], item[0][1])):
@@ -94,6 +95,7 @@ def make_table(records: list[dict[str, Any]], precision: int) -> str:
         balanced_accuracy = [float(record["balanced_accuracy"]) for record in group]
         rare_recall = [float(record["rare_attack_recall"]) for record in group]
         uploaded_mb = [float(record["uploaded_mb_per_client_round"]) for record in group]
+        total_uploaded_mb = [float(record["total_uploaded_mb"]) for record in group]
         params = [float(record["trainable_params"]) for record in group]
         lines.append(
             " & ".join(
@@ -104,6 +106,7 @@ def make_table(records: list[dict[str, Any]], precision: int) -> str:
                     _format_mean_std(balanced_accuracy, precision),
                     _format_mean_std(rare_recall, precision),
                     _format_number(uploaded_mb, 3),
+                    _format_number(total_uploaded_mb, 3),
                     _format_number(params, 0),
                 ]
             )

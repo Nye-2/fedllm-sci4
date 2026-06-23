@@ -9,12 +9,13 @@ Item & Setting \\
 Primary file & ML-EdgeIIoT selected CSV \\
 Backbone & Qwen3.5-2B, text-only pathway \\
 Task & 15-class closed-set IDS \\
-Split & Stratified 80/10/10 row-level \\
+Split & Stratified 80/10/10 row-level; 126,233/15,774/15,793 \\
 Seed & 20260531 \\
 FL clients & $K=10$ simulated clients \\
 Main non-IID & Dirichlet label skew, $\alpha=0.5$ \\
 Main DP sweep & $\epsilon\in\{8,4,2\}$, $\delta=10^{-5}$ \\
 Optional sensitivity & IID, $K=20$, partial participation, $\epsilon=1$ \\
+Optional external & WUSTL-IIOT-2021 after main tables stabilize \\
 Privacy unit & Client-level upload release \\
 \bottomrule
 \end{tabular}

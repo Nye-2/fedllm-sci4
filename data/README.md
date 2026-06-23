@@ -27,7 +27,13 @@ Convenience symlinks:
 ```text
 data/raw/edgeiiotset/full_dataset
 data/raw/edgeiiotset/DNN-EdgeIIoT-dataset.csv
-data/raw/edgeiiotset/ML-EdgeIIoT-dataset-full.csv
+data/raw/edgeiiotset/ML-EdgeIIoT-dataset-full.csv  # legacy convenience symlink, if present
+```
+
+Canonical main paper CSV:
+
+```text
+data/raw/edgeiiotset/full_dataset/Selected dataset for ML and DL/ML-EdgeIIoT-dataset.csv
 ```
 
 Extracted contents:

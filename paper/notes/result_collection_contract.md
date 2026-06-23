@@ -6,8 +6,13 @@ Every server run should export a JSON or JSONL record with these fields so table
 - `method`
 - `seed`
 - `dataset`
+- `dataset_protocol_id`
 - `split_artifact`
 - `client_partition_artifact`
+- `table_id`
+- `baseline_source`
+- `budget_match_group`
+- `budget_match_type`
 - `backbone`
 - `model_source`
 - `modelscope_id`
@@ -16,6 +21,8 @@ Every server run should export a JSON or JSONL record with these fields so table
 - `experiment_tier`
 - `target_modules`
 - `rank_allocation`
+- `hyperparameter_search_space`
+- `selected_hyperparameters`
 - `privacy.enabled`
 - `privacy.epsilon`
 - `privacy.delta`
@@ -24,6 +31,7 @@ Every server run should export a JSON or JSONL record with these fields so table
 - `privacy.clipping`
 - `privacy.noise_allocation`
 - `privacy.clipping_rate_by_round`
+- `preprocessing_fingerprint_path`
 - `trainable_params`
 - `uploaded_mb_per_client_round`
 - `total_uploaded_mb`

@@ -1,8 +1,8 @@
 # SPECTRA-FedCore Research Design
 
 Date: 2026-05-31
-Status: v0.4 Qwen3.5-2B-aligned SCI-oriented research design
-Working title: SPECTRA-FedCore: Public-Spectral Private Federated Core Adaptation for Edge IIoT Security
+Status: v0.5 Qwen3.5-2B-aligned SCI-oriented experiment design
+Working title: SPECTRA-FedCore: Private Federated Evolution of Edge Small Language Models for IIoT Security
 
 Name note: use `SPECTRA-FedCore` as the short working method name during experiments. The final paper title can add "client-side DP" or "differentially private" after results and framing are settled.
 
@@ -10,11 +10,11 @@ Execution note: the final server-facing experiment protocol is `docs/superpowers
 
 ## 1. One-Sentence Positioning
 
-SPECTRA-FedCore is an auditable, edge-budget-aware DP federated adaptation framework that turns an edge-deployable small language model into an IIoT intrusion-detection assistant by using only public backbone spectral information to define, allocate, train, privatize, and aggregate tiny core adapters.
+SPECTRA-FedCore is an auditable, edge-budget-aware DP federated adaptation framework for continuously improving an edge-deployable small language model without centralizing raw telemetry. It uses only public backbone spectral information to define, allocate, train, privatize, and aggregate tiny core adapters.
 
 The paper should not be framed as "we are the first to train only a small square LoRA core." Fed-SB already makes a closely related claim. The defensible framing is:
 
-> Existing private federated LoRA methods optimize generic language tasks; existing IIoT IDS methods optimize lightweight classifiers. SPECTRA-FedCore bridges the missing middle: a public-basis, budget-aware, auditable DP-FL method for edge small language models in IIoT security.
+> As the intelligence density of small language models rises, edge devices can host capable local assistants rather than only lightweight classifiers. SPECTRA-FedCore studies how such assistants can keep evolving through federated learning while preserving privacy through client-side DP and public-spectral adaptation.
 
 ## 1.1 Target SCI Positioning
 
@@ -33,27 +33,27 @@ Best-fit journal families:
 
 The manuscript should avoid a "LLM beats all IDS models" claim. The stronger SCI story is:
 
-> We study whether an edge-deployable small language model can be privately federated into an IIoT security assistant under strict client-side DP, and how much utility can be recovered by public spectral structure and edge-budget-aware adaptation.
+> Small models are becoming capable enough to act as local edge assistants. We study whether a Qwen3.5-2B assistant can be privately and continuously improved across IIoT gateways under strict client-side DP, and how much utility can be recovered by public spectral structure and edge-budget-aware adaptation.
 
 ## 1.2 Research Questions
 
-RQ1: Under client-side release DP, can public-spectral core adaptation achieve a better utility-privacy-communication trade-off than FedAvg-LoRA and public Fed-SB-style baselines?
+RQ1: Can an edge-deployable Qwen3.5-2B security assistant be privately federated under client-side release DP while retaining useful intrusion-detection performance?
 
-RQ2: Does public spectrum-driven rank allocation improve rare-attack recall and macro-F1 under fixed communication and trainable-parameter budgets?
+RQ2: Does public-spectral core adaptation achieve a better utility-privacy-communication trade-off than FedAvg-LoRA and Fed-SB-style fixed-core baselines?
 
-RQ3: Does layer-adaptive clipping/noise reduce the performance loss caused by client-side DP compared with global clipping and uniform noise?
+RQ3: Does public spectrum-driven rank and noise allocation reduce the performance loss caused by client-side DP compared with uniform rank, global clipping, and uniform noise?
 
-RQ4: Does a local residual core improve personalized IIoT gateway performance without degrading global generalization?
+RQ4: Does a local residual core improve personalized IIoT gateway performance without spending additional privacy budget or degrading global generalization?
 
 RQ5: Under a mainstream Edge-IIoTset closed-set protocol, how stable are the conclusions across simulated FL client partitions, duplicate diagnostics, and raw-file robustness checks?
 
 ## 1.3 Testable Hypotheses
 
-H1: At the same `(epsilon, delta)` and communication budget, SPECTRA-FedCore is expected to improve macro-F1 over FedAvg-LoRA and to be competitive with, or better than, a Fed-SB-style fixed-core baseline under client-side release DP.
+H1: A compact Qwen3.5-2B edge assistant can retain useful closed-set IIoT intrusion-detection performance under client-side release DP when adaptation is constrained to small public-spectral cores.
 
-H2: Public spectrum-adaptive `p_l` is expected to improve macro-F1 per uploaded MB compared with uniform-rank core adapters.
+H2: At the same `(epsilon, delta)` and communication budget, SPECTRA-FedCore is expected to improve macro-F1 over FedAvg-LoRA and to be competitive with, or better than, a Fed-SB-style fixed-core baseline under client-side release DP.
 
-H3: Layer-adaptive clipping/noise is expected to improve low-epsilon performance, especially at `epsilon <= 4`, by reducing over-noising of informative layers.
+H3: Public spectrum-adaptive `p_l` and layer-adaptive clipping/noise are expected to improve macro-F1 per uploaded MB, especially at `epsilon <= 4`, by reducing over-noising of informative layers.
 
 H4: Local residual cores are expected to improve client-personalized F1 under device-skew and attack-skew without requiring extra privacy budget because they are never uploaded.
 
@@ -73,12 +73,12 @@ Fed-SB already states that LoRA-SB learns a small square matrix between fixed ad
 
 ### 2.1 Novelty Matrix
 
-| Dimension | FedAvg-LoRA | LoRA-XS / PiSSA | Fed-SB / LoRA-SB | DP-FL IDS classifiers | SPECTRA-FedCore |
+| Dimension | FedAvg-LoRA / DP-LoRA | LoRA-XS / PiSSA | Fed-SB / LoRA-SB | DP-FL IDS classifiers | SPECTRA-FedCore |
 | --- | --- | --- | --- | --- | --- |
 | Small trainable adapter | yes | yes | yes | no | yes |
 | Trains only square core | no | yes | yes | no | yes |
 | Public-backbone-only basis | no | partial | no, update-based initialization is task-driven | not applicable | yes |
-| Client-side release DP as main setting | sometimes | no | private setting exists | often | yes |
+| Client-side release DP as main setting | yes for DP-LoRA-style runs | no | private setting exists | often | yes |
 | Layer-wise public spectral rank allocation | no | no | no | no | yes |
 | Layer-wise DP noise allocation for core adapters | no | no | no | no | yes |
 | Local residual for IIoT non-IID gateways | no | no | limited/personalization-dependent | sometimes | yes |
@@ -105,25 +105,28 @@ The non-colliding contribution should be:
 
 ## 3. Problem Story
 
-Industrial edge gateways observe sensitive telemetry: packet features, device activity, logs, alerts, and system metrics. Uploading raw telemetry to a cloud model is often unacceptable. Traditional IDS models such as XGBoost, Random Forest, CNN, or MLP are strong for classification, but they are narrow tools: they do not naturally support local explanation, natural-language operator interaction, remediation suggestions, or policy generation.
+Small language models are becoming dense enough to make edge intelligence practical. A compact model can classify, triage, explain, and interact with local operational data in ways that older lightweight classifiers could not. This changes the research question from "can we compress a cloud model?" to "can a local assistant keep improving after deployment without exporting sensitive data?"
 
-Small language models can provide that unified security assistant interface, but edge-side private federated adaptation has four pressure points:
+Industrial edge gateways observe sensitive telemetry: packet features, device activity, logs, alerts, and system metrics. Uploading raw telemetry or telemetry-derived prompts to a cloud API can be unacceptable because of privacy, compliance, latency, cost, and availability constraints. Traditional IDS models such as XGBoost, Random Forest, CNN, or MLP are strong for classification, but they are narrow tools: they do not naturally support local explanation, natural-language operator interaction, remediation suggestions, or policy generation.
+
+Small language models can provide that unified security assistant interface, but edge-side private federated evolution has four pressure points:
 
 - Memory: even small LLM fine-tuning is heavier than inference.
 - Communication: gateways cannot upload large LoRA factors every round.
 - Non-IID data: each gateway sees different devices, protocols, benign baselines, and attack classes.
-- Privacy auditability: "federated" alone does not provide a formal privacy guarantee.
+- Privacy auditability: "federated" alone does not provide a formal privacy guarantee, and API-based adaptation leaks local prompts or logs by design.
 
-SPECTRA-FedCore answers this by constraining adaptation to public spectral subspaces of the released backbone, training only tiny per-layer cores, and releasing clipped/noised core updates with explicit privacy accounting.
+SPECTRA-FedCore answers this by constraining adaptation to public spectral subspaces of the released backbone, training only tiny per-layer cores, and releasing clipped/noised core updates with explicit privacy accounting. It is best understood as a mechanism for private federated evolution of an edge SLM, not merely as another adapter variant.
 
 ### 3.1 Introduction Narrative Arc
 
-The introduction should move through four steps:
+The introduction should move through five steps:
 
-1. Edge IIoT security needs collaborative learning because individual gateways see incomplete attack distributions.
-2. Raw telemetry and local traffic logs are sensitive, so FL is attractive but not sufficient without auditable DP.
-3. Small language models are useful security assistants, but generic private federated LoRA methods are not designed around edge budgets, public-only initialization, or IIoT leakage risks.
-4. SPECTRA-FedCore uses public backbone spectra to define the adaptation subspace and to allocate rank/noise budgets, then evaluates the full privacy-utility-communication story on a realistic IIoT benchmark.
+1. The intelligence density of small models is rising, making edge-deployed assistants realistic.
+2. IIoT gateways need local security intelligence because raw telemetry and API prompts are sensitive.
+3. A single gateway sees incomplete attacks, so the assistant must evolve collaboratively through FL.
+4. FL alone is not privacy; client-side DP is auditable but damages utility.
+5. SPECTRA-FedCore uses public backbone spectra to define the adaptation subspace and allocate rank/noise budgets, then evaluates the full privacy-utility-communication story on a realistic IIoT benchmark.
 
 ## 4. Backbone and Deployment Assumption
 
@@ -600,15 +603,16 @@ Dataset split: ML-EdgeIIoT 80/10/10 stratified row-level split
 FL setting: single-server simulation, K=10 clients, Dirichlet alpha=0.5
 Task: 15-class fine-grained IDS
 Privacy: epsilon in {8, 4, 2}, delta = 1e-5
-Methods: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
-Metrics: Macro-F1, balanced accuracy, rare attack recall, uploaded MB/round, trainable parameters
+Methods: FedAvg-LoRA-DP / DP-LoRA-style, Fed-SB-style-DP, SPECTRA-FedCore-DP
+Metrics: Macro-F1, balanced accuracy, rare attack recall, uploaded MB/round, total uploaded MB, trainable parameters
+Statistics: three seeds, mean +/- std, paired bootstrap CI for SPECTRA-FedCore-DP vs Fed-SB-style-DP
 ```
 
 Table 2: Non-DP and central/local context.
 
 ```text
 Methods: prompt-only Qwen3.5-2B, centralized LoRA, local-only SPECTRA-Core, FedAvg-LoRA non-DP, SPECTRA-Core non-DP
-Purpose: establish non-DP ceiling and local/central context
+Purpose: establish non-DP ceiling and quantify the loss introduced by FL and DP
 Report: Macro-F1, balanced accuracy, rare recall, peak VRAM, wall-clock time
 ```
 
@@ -617,6 +621,7 @@ Table 3: Non-LLM IDS context.
 ```text
 Methods: Random Forest, XGBoost/LightGBM, MLP
 Purpose: show that classical models remain strong on pure tabular classification, while SPECTRA targets private federated edge assistant trade-offs
+Protocol: same split, same excluded identifier-like columns, train-only preprocessing, class weighting when supported, no synthetic oversampling in the main table
 ```
 
 Table 4: Ablation of utility recovery under client-side DP.
@@ -629,6 +634,7 @@ A3 Public SVD basis + spectral rank + layer-adaptive DP
 A4 A3 + local residual
 A5 A4 + shrinkage post-processing
 Primary epsilon: 4
+Execution: one-seed screening first; repeat reported rows with three seeds when compute allows
 ```
 
 Table 5: Reproducibility and leakage diagnostics.
@@ -639,6 +645,15 @@ Deduplicated sensitivity if feature-hash overlap is material
 Raw full-package per-file 8/1/1 robustness split
 K=20, partial participation, and epsilon=1 are optional after P0/P1
 Report: duplicate rate, performance shift, and whether method ranking changes
+```
+
+Table 5b: Optional external vertical validation.
+
+```text
+First choice: WUSTL-IIOT-2021
+Second choice: ToN_IoT
+Purpose: show that the conclusion is not a one-dataset artifact, only after Edge-IIoTset P0/P1 tables are stable
+Protocol requirement: frozen split, frozen prompt renderer, frozen client partition, and same result artifact contract
 ```
 
 Table 6: Edge deployment cost.
@@ -654,12 +669,17 @@ Prompt length distribution
 
 Minimum publishable package:
 
-- Main DP-FL table with FedAvg-LoRA-DP, Fed-SB-style-DP, and SPECTRA-FedCore-DP.
+- Main DP-FL table with FedAvg-LoRA-DP / DP-LoRA-style, Fed-SB-style-DP, and SPECTRA-FedCore-DP.
 - Non-DP context table for prompt-only, central/local adapters, and SPECTRA non-DP.
 - Classical IDS context table with Random Forest, XGBoost/LightGBM, and MLP.
 - A0-A5 ablation table showing why the full method recovers client-side DP utility.
 - Duplicate diagnostics and raw-file robustness table.
 - Reproducibility package with fixed seeds, split indices, configs, and privacy ledgers.
+
+Optional appendix package:
+
+- WUSTL-IIOT-2021 external validation under a simplified version of the same protocol.
+- ToN_IoT external validation only if the paper wants a broader Industry 4.0 dataset story and server time remains.
 
 ### Non-LLM IDS Baselines
 
@@ -676,14 +696,16 @@ Use the same Qwen3.5-2B backbone where possible:
 - Zero-shot or prompt-only Qwen3.5 classifier
 - Centralized LoRA
 - Local-only public-spectral core adapter
-- FedAvg-LoRA
-- FFA-LoRA
+- FedAvg-LoRA non-DP
+- FedAvg-LoRA-DP / DP-LoRA-style
 - Fed-SB-style fixed-core baseline
 - SPECTRA-FedCore without DP
 - SPECTRA-FedCore without adaptive allocation
 - Full SPECTRA-FedCore
 
 If Fed-SB cannot be fully reproduced, include a clearly labeled "Fed-SB-style fixed-core baseline" and cite the limitation.
+
+DP-LoRA-style means the ordinary LoRA adapter is federated by FedAvg and client uploads are clipped/noised under the same client-level RDP accountant. This is the clean in-repository baseline for the DP-LoRA family; do not introduce a separate DP-LoRA codebase unless the P0 table is already complete.
 
 ## 10. Main Metrics
 
@@ -716,8 +738,9 @@ Efficiency:
 Robustness:
 
 - Non-IID severity sweep.
-- Client participation sweep: 100%, 20%, 10%.
+- Client participation sweep: 100% main, 50% optional.
 - Rare-class imbalance sweep if feasible.
+- Optional external validation on WUSTL-IIOT-2021 first, ToN_IoT second.
 
 Statistical reporting:
 
@@ -792,45 +815,48 @@ python scripts/make_tables.py --runs outputs/
 
 Recommended contribution text:
 
-1. We propose SPECTRA-FedCore, a public-spectral federated core adaptation method for edge small language models. It constructs all adapter bases from released backbone weights, so basis construction does not depend on private client samples or gradients.
+1. We formulate private federated evolution of edge small language models as a concrete IIoT security problem, where a compact Qwen3.5-2B assistant must improve across gateways without centralizing raw telemetry or API prompts.
 
-2. We introduce an edge-budget-aware allocation scheme that selects layer-wise core sizes and privacy noise scales from public singular-value spectra under communication, parameter, and RDP privacy constraints.
+2. We propose SPECTRA-FedCore, a public-spectral federated core adaptation method for edge small language models. It constructs all adapter bases from released backbone weights, so basis construction does not depend on private client samples or gradients.
 
-3. We provide an auditable client-level DP federated training protocol for core adapters, with explicit clipping, Gaussian release, RDP accounting, participation tracking, and reproducible privacy ledgers.
+3. We introduce an edge-budget-aware utility-recovery scheme that selects layer-wise core sizes and privacy noise scales from public singular-value spectra under communication, parameter, and RDP privacy constraints.
 
-4. We build a federated instruction intrusion-detection benchmark on Edge-IIoTset, using a mainstream stratified closed-set split, single-server simulated FL clients, duplicate diagnostics, raw-file robustness checks, rare attack recall, and edge deployment metrics.
+4. We provide an auditable client-level DP federated training protocol for core adapters, with explicit clipping, Gaussian release, RDP accounting, participation tracking, local residual personalization, and reproducible privacy ledgers.
+
+5. We build a Qwen3.5-2B federated instruction intrusion-detection benchmark on Edge-IIoTset, using a mainstream stratified closed-set split, single-server simulated FL clients, duplicate diagnostics, raw-file robustness checks, rare attack recall, and edge deployment metrics.
 
 ## 13.1 Manuscript Skeleton
 
 Recommended title:
 
 ```text
-SPECTRA-FedCore: Public-Spectral Client-Side Differentially Private Federated Adaptation of Edge Small Language Models for IIoT Intrusion Detection
+SPECTRA-FedCore: Private Federated Evolution of Edge Small Language Models for IIoT Security
 ```
 
 Shorter title option:
 
 ```text
-SPECTRA-FedCore for Private Edge-IIoT Security Assistants
+Private Federated Edge Small Language Models for IIoT Security
 ```
 
 Abstract structure:
 
-1. Problem: IIoT gateways need collaborative intrusion detection, but raw telemetry cannot be shared and client-side DP damages utility.
-2. Gap: Existing private federated LoRA methods are not designed around public-only basis construction, edge budget allocation, and leakage-aware IIoT evaluation.
-3. Method: Public spectral core adapters, layer-wise rank/noise allocation, local residual personalization, and post-processing denoising.
-4. Evaluation: Edge-IIoTset instruction IDS under a mainstream stratified split, simulated IID/non-IID FL clients on one server, client-side DP, and public Fed-SB baselines.
-5. Claim: Better privacy-utility-communication trade-off, not absolute dominance over all tabular IDS classifiers.
+1. Trend: Rising small-model intelligence density makes edge-deployed security assistants realistic.
+2. Problem: Such assistants must keep improving, but raw telemetry and API prompts cannot be centralized.
+3. Gap: FL alone is not privacy, and client-side DP sharply damages adapter utility under edge budgets.
+4. Method: Public spectral core adapters, layer-wise rank/noise allocation, local residual personalization, and post-processing denoising.
+5. Evaluation: Qwen3.5-2B Edge-IIoTset instruction IDS under a mainstream stratified split, simulated IID/non-IID FL clients on one server, client-side DP, and Fed-SB-style baselines.
+6. Claim: Better privacy-utility-communication trade-off for private edge assistant evolution, not absolute dominance over all tabular IDS classifiers.
 
 Suggested section outline:
 
 ```text
 1. Introduction
 2. Related Work
-   2.1 IIoT intrusion detection and Edge-IIoTset
-   2.2 Federated and differentially private IDS
-   2.3 PEFT and federated LoRA for LLMs
-   2.4 Public spectral adapters and Fed-SB boundary
+   2.1 Edge small language models and on-device intelligence
+   2.2 IIoT intrusion detection and Edge-IIoTset
+   2.3 Federated and differentially private IDS
+   2.4 PEFT, public spectral adapters, and Fed-SB boundary
 3. Problem Formulation and Threat Model
 4. SPECTRA-FedCore
    4.1 Public spectral core parameterization
@@ -960,7 +986,7 @@ Prepared on 2026-05-31:
 - Edge-IIoT label normalization currently maps `OS_Fingerprinting` to `Fingerprinting` to align raw source files with the selected ML/DNN CSV label space.
 - Fed-SB public code was cloned under `data/external/fed-sb` at commit `e9e649822ce63437535f72fbf06c146a22b9e527`, with SNLI linked into the official `DP/SNLI/data` location for server-side reproduction.
 
-## 18. Literature-Calibrated v0.3 Refinement
+## 18. Literature-Calibrated Refinement
 
 This section records the refined paper design after checking recent Edge-IIoTset IDS papers, FL foundations, DP-FL practice, and federated LoRA/PEFT papers. The guiding decision is:
 
@@ -1009,7 +1035,7 @@ Small LLM security assistants can be privately federated under edge budgets when
 Primary dataset:
 
 ```text
-data/raw/edgeiiotset/ML-EdgeIIoT-dataset-full.csv
+data/raw/edgeiiotset/full_dataset/Selected dataset for ML and DL/ML-EdgeIIoT-dataset.csv
 ```
 
 Primary task:
@@ -1175,7 +1201,7 @@ Minimum baselines:
    FedAvg-LoRA and Fed-SB-style fixed-core.
 
 4. DP baselines:
-   FedAvg-LoRA-DP, Fed-SB-style-DP, and SPECTRA-FedCore-DP.
+   FedAvg-LoRA-DP / DP-LoRA-style, Fed-SB-style-DP, and SPECTRA-FedCore-DP.
 
 Optional baselines:
 
@@ -1196,9 +1222,9 @@ Table 1: Main closed-set FL result.
 ```text
 Dataset: ML-EdgeIIoT, 80/10/10 stratified split
 Clients: K=10, Dirichlet alpha=0.5
-Methods: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
+Methods: FedAvg-LoRA-DP / DP-LoRA-style, Fed-SB-style-DP, SPECTRA-FedCore-DP
 Privacy: epsilon in {8, 4, 2}
-Metrics: macro-F1, rare-attack recall, weighted-F1, uploaded MB/round
+Metrics: macro-F1, rare-attack recall, weighted-F1, uploaded MB/round, total uploaded MB
 ```
 
 Table 2: Non-DP and central/local context.
@@ -1258,7 +1284,7 @@ Figure 3: DP degradation curve.
 
 ```text
 epsilon vs macro-F1
-methods: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
+methods: FedAvg-LoRA-DP / DP-LoRA-style, Fed-SB-style-DP, SPECTRA-FedCore-DP
 ```
 
 Figure 4: Ablation waterfall.

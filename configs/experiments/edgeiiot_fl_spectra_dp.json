@@ -4,7 +4,7 @@
   "output_dir": "outputs/edgeiiot_fl_spectra_dp",
   "data": {
     "dataset": "edgeiiot_ml",
-    "csv_path": "data/raw/edgeiiotset/ML-EdgeIIoT-dataset-full.csv",
+    "csv_path": "data/raw/edgeiiotset/full_dataset/Selected dataset for ML and DL/ML-EdgeIIoT-dataset.csv",
     "split": "stratified_80_10_10",
     "exclude_columns": [
       "frame.time",
@@ -67,6 +67,7 @@
       "central_lora",
       "local_only_spectra_core",
       "fedavg_lora",
+      "fedavg_lora_dp_dplora_style",
       "fedsb_style_fixed_core",
       "spectra_core_non_dp",
       "spectra_fedcore_dp"
@@ -80,7 +81,7 @@
       "A5_A4_shrinkage"
     ],
     "classical_baselines": ["random_forest", "xgboost_or_lightgbm", "mlp"],
-    "p2_optional": ["K20_sensitivity", "participation_0.5", "epsilon_1", "cross_backbone_check"]
+    "p2_optional": ["K20_sensitivity", "participation_0.5", "epsilon_1", "wustl_iiot_2021_external", "cross_backbone_check"]
   },
   "metrics": {
     "primary": "macro_f1",

@@ -41,15 +41,21 @@ The results section expects run-level artifacts with:
 
 - method name
 - seed
+- dataset protocol id
+- table id
 - split id
 - client partition id
+- baseline source
+- budget-match type
 - backbone checkpoint and revision
 - model source and input modality
 - experiment tier (`P0`, `P1`, or `P2`)
 - adapter target modules
 - trainable parameter count
 - uploaded MB per round
+- total uploaded MB
 - privacy ledger path
+- preprocessing fingerprint path
 - macro-F1
 - balanced accuracy
 - per-class recall

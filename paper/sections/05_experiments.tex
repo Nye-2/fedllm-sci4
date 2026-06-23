@@ -1,7 +1,7 @@
 \subsection{Dataset and Splits}
 The primary benchmark uses \dataset with the selected machine-learning CSV and a fixed 80/10/10 stratified row-level split over the normalized fifteen-class label space. This protocol follows common \dataset intrusion-detection practice and keeps the main result comparable to prior IDS papers. The training split is partitioned into simulated federated clients; validation and test splits remain global and fixed across all methods.
 
-The repository stores split artifacts with seed 20260531. The main non-IID setting uses $K=10$ clients and Dirichlet label skew with $\alpha=0.5$. We also run an IID sanity partition for implementation validation. A $K=20$ client setting, partial participation, and $\epsilon=1$ are optional sensitivity experiments after the main tables are complete. Raw-file per-file 8/1/1 splits and duplicate-controlled diagnostics are treated as robustness checks, not as the main protocol.
+The repository stores split artifacts with seed 20260531. The main non-IID setting uses $K=10$ clients and Dirichlet label skew with $\alpha=0.5$. We also run an IID sanity partition for implementation validation. A $K=20$ client setting, partial participation, and $\epsilon=1$ are optional sensitivity experiments after the main tables are complete. Raw-file per-file 8/1/1 splits and duplicate-controlled diagnostics are treated as robustness checks, not as the main protocol. If the main \dataset results are stable, WUSTL-IIOT-2021 is the first appendix candidate for external validation, with ToN-IoT left as a broader Industry 4.0 check.
 
 \subsection{Backbone and Edge-Model Choice}
 The primary and fixed backbone is Qwen3.5-2B, used with the backbone frozen and only adapters trained. This keeps the experimental story focused on a single recent 2B edge-relevant model rather than a broad model-zoo comparison. Qwen3.5-2B supports multimodal inputs, but our protocol uses only text prompts derived from IIoT telemetry; no image input or vision-specific supervision is used.
@@ -11,29 +11,36 @@ All main adapter, privacy, and communication comparisons use this same backbone.
 \subsection{Prompt and Features}
 The main prompt uses a compact curated feature schema of approximately 20--35 protocol and traffic-behavior fields. Identifier-like and high-leakage columns are excluded, including timestamps, source/destination IPs, payload-like text, URI fields, referer fields, and label columns. Numeric features are rendered consistently, and any quantile binning must use only training data with saved bin boundaries.
 
+\subsection{Evaluation Questions}
+The experiment design is organized around reviewer questions rather than a long method list. The main table asks whether \method{} improves the client-level DP-FL trade-off under the same backbone, split, client partition, privacy accountant, and communication reporting. The context table asks how much performance is lost relative to centralized and non-DP adaptation. The classical IDS table calibrates the tabular difficulty of \dataset but is not used to claim that language models dominate specialized tabular classifiers. The ablation table asks which public-spectral component recovers utility under DP noise.
+
 \subsection{Compared Methods}
 The method comparison is deliberately staged. The P0 set is the minimum publishable package; the P1 set explains why the full method works; P2 is reserved for optional appendix checks.
 \begin{itemize}[leftmargin=*]
-  \item \textbf{P0 main comparisons}: prompt-only Qwen3.5-2B, centralized LoRA, local-only \core{}, FedAvg-LoRA, Fed-SB-style fixed-core, \core{} without DP, and full \method{} with client-level DP.
+  \item \textbf{P0 main comparisons}: prompt-only Qwen3.5-2B, centralized LoRA, local-only \core{}, FedAvg-LoRA, FedAvg-LoRA-DP/DP-LoRA-style, Fed-SB-style fixed-core, \core{} without DP, and full \method{} with client-level DP.
   \item \textbf{P1 ablations}: random basis versus public SVD basis, uniform rank versus spectral rank allocation, global DP noise versus layer-adaptive DP noise, no residual versus local residual, and no shrinkage versus shrinkage.
   \item \textbf{Classical IDS context}: Random Forest, XGBoost or LightGBM, and MLP on numeric/tabular features. These baselines calibrate the tabular task; they are not the main private federated assistant comparison.
-  \item \textbf{P2 optional checks}: $K=20$, partial participation, $\epsilon=1$, source/protocol skew, and cross-backbone checks.
+  \item \textbf{P2 optional checks}: $K=20$, partial participation, $\epsilon=1$, source/protocol skew, WUSTL-IIOT-2021 external validation, and cross-backbone checks.
 \end{itemize}
-Fed-SB is the strongest collision-risk baseline and must be treated seriously. We first reproduce the authors' public private-FL SNLI experiment to verify environment and privacy behavior. If faithful adaptation to Qwen3.5-2B is brittle, we report a clearly labeled Fed-SB-style fixed-core baseline in our code path under matched budgets.
+Fed-SB is the strongest collision-risk baseline and must be treated seriously. We first reproduce the authors' public private-FL SNLI experiment to verify environment and privacy behavior. If faithful adaptation to Qwen3.5-2B is brittle, we report a clearly labeled Fed-SB-style fixed-core baseline in our code path under matched budgets. FedAvg-LoRA-DP is used as the controlled DP-LoRA-style baseline because it isolates the effect of noising ordinary LoRA coordinates under the same client-level release accountant.
 
 \subsection{Fair Comparison Regimes}
 Rank alone is not a fair matching variable because different adapter methods have different uploaded coordinates, trainable parameters, initialization costs, and privacy effects. Main comparisons are constrained by:
 \begin{itemize}[leftmargin=*]
   \item same Qwen3.5-2B backbone, prompt renderer, split, client partition, rounds, and local epochs;
   \item same privacy budget: identical $(\epsilon,\delta)$ and accountant convention for DP methods;
-  \item reported communication and capacity budgets: uploaded MB per client per round and trainable adapter parameters.
+  \item fixed validation protocol and comparable hyperparameter search budget per method family;
+  \item reported communication and capacity budgets: uploaded MB per client per round, total uploaded MB, and trainable adapter parameters.
 \end{itemize}
-The main epsilon sweep is $\epsilon\in\{8,4,2\}$ with $\delta=10^{-5}$. $\epsilon=1$ is optional and only reported if training remains informative.
+The main epsilon sweep is $\epsilon\in\{8,4,2\}$ with $\delta=10^{-5}$. $\epsilon=1$ is optional and only reported if training remains informative. When exact communication matching is impossible, we report whether a row is privacy-matched, communication-matched, or capacity-matched.
+
+\subsection{Execution Gates}
+Server runs proceed from smoke tests to final three-seed tables. First, data artifacts, Qwen3.5-2B loading, tokenizer behavior, target modules, and prompt rendering must pass smoke checks. Second, one-seed non-DP local and FL runs must produce valid label extraction and non-random macro-F1. Third, one-seed DP runs at $\epsilon=4$ must produce valid privacy ledgers and stable clipping rates. Only after these gates do we launch the full $\epsilon\in\{8,4,2\}$ P0 sweep and final three-seed reruns.
 
 \subsection{Metrics and Statistical Reporting}
-The primary utility metric is macro-F1 on the fifteen-class test set. We also report balanced accuracy, per-class recall, rare-attack recall, binary AUROC when applicable, and confusion matrices. Efficiency metrics include trainable parameters, uploaded MB per client per round, total communication, peak VRAM, wall-clock time, inference latency, and prompt-token length. Privacy metrics include $(\epsilon,\delta)$, the RDP order grid, clipping rates, and noise multipliers.
+The primary utility metric is macro-F1 on the fifteen-class test set. We also report balanced accuracy, per-class recall, rare-attack recall, binary AUROC when applicable, and confusion matrices. Rare attack labels are defined from the training split only and saved with every run artifact. Efficiency metrics include trainable parameters, uploaded MB per client per round, total communication, peak VRAM, wall-clock time, inference latency, and prompt-token length. Privacy metrics include $(\epsilon,\delta)$, the RDP order grid, clipping rates, and noise multipliers.
 
-All main tables should report at least three seeds with mean and standard deviation. The main comparison against the Fed-SB-style fixed-core baseline should include paired tests or bootstrap confidence intervals. For rare attacks, per-class recall is mandatory because aggregate macro-F1 may hide security-relevant failures.
+All main tables should report at least three seeds with mean and standard deviation. The main comparison against the Fed-SB-style fixed-core baseline should include paired tests or bootstrap confidence intervals. Ablations may be screened with one seed during execution, but final reported ablation rows should be repeated with three seeds when compute allows. For rare attacks, per-class recall is mandatory because aggregate macro-F1 may hide security-relevant failures.
 
 \input{tables/experiment_matrix}
 \input{tables/dataset_protocol}

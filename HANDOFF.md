@@ -21,7 +21,7 @@
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
-| **研究设计文档** | ✅ | `docs/superpowers/specs/` 下 v0.3 文献校准版，包含完整数学公式、实验矩阵、消融设计、风险登记册 |
+| **研究设计文档** | ✅ | `docs/superpowers/specs/` 下 v0.5 Qwen3.5-2B 实验设计版，包含完整数学公式、实验矩阵、消融设计、风险登记册 |
 | **最终实验方案** | ✅ | `docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`，固定 Qwen3.5-2B 和 P0/P1/P2 运行顺序 |
 | **数据准备层** | ✅ | `src/fedllm_data/` + `tests/`，覆盖 manifest、主 split、client partition、portable paths |
 | **方法核心工具** | ✅ | `src/spectra/`，NumPy 版 SVD basis、core adapter、DP accountant、FL aggregation、metrics，CPU synthetic tests 已覆盖 |
@@ -39,7 +39,7 @@
 | **P0** | 加载 Qwen3.5-2B 并 inspect 可挂载目标模块 | 0.5 天 | 需要 transformers/modelscope 环境 |
 | **P0** | 把 `src/spectra/` 数学核心接入 PyTorch/PEFT 训练层 | 2-3 天 | 需要服务器 GPU 环境 |
 | **P0** | 实现单服务器训练循环（K=10，IID sanity + Dirichlet Non-IID） | 2-3 天 | 基础 client partition artifact 已生成 |
-| **P0** | 跑主实验：FedAvg-LoRA-DP、Fed-SB-style-DP、SPECTRA-FedCore-DP | 3-5 天 | 依赖训练层和 DP upload path |
+| **P0** | 跑主实验：FedAvg-LoRA-DP/DP-LoRA-style、Fed-SB-style-DP、SPECTRA-FedCore-DP | 3-5 天 | 依赖训练层和 DP upload path |
 | **P1** | A0-A5 消融：谱基、rank、噪声、本地残差、shrinkage | 3-5 天 | 先固定 epsilon=4 |
 | **P1** | 非 LLM IDS 基线（XGBoost/LightGBM、RF、MLP） | 1-2 天 | 可用 sklearn + xgboost/lightgbm |
 | **P1** | 泄露诊断、raw per-file robustness、论文图表 | 2-4 天 | 依赖主实验结果 |
@@ -142,7 +142,7 @@ python -m compileall src scripts
 python -m pytest -q
 ```
 
-**期望输出**：17 passed。
+**期望输出**：全部测试通过；如有环境依赖缺失导致 skip，需要在服务器日志中说明。
 
 ### 4.4 数据集准备
 
@@ -324,14 +324,14 @@ test  = 15,793
 ### 必读（按顺序）
 
 1. **`docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`**  
-   **这是服务器实验执行手册**。优先读它，按 P0/P1/P2 顺序跑，不要一上来跑完整模型动物园。
+   **这是服务器实验执行手册**。优先读它，按 P0/P1/P2 顺序跑，不要一上来做大规模模型横向比较。
 
 2. **`docs/superpowers/specs/2026-05-31-spectra-dp-fedcore-design.md`**  
    **这是整个项目的宪法**。1313 行，涵盖：
    - 研究问题（RQ1-RQ5）和可检验假设（H1-H5）
    - 与 Fed-SB 的碰撞边界（什么不能声称、什么可以声称）
    - 完整数学公式（谱基、核心参数化、DP 协议、层自适应噪声分配）
-   - 实验矩阵（6 张表）
+   - 实验矩阵（主 DP-FL、非 DP 上限、传统 IDS、消融、诊断、edge cost、可选外部验证）
    - 消融设计和预期图表
    - 风险登记册（9 项风险及缓解）
    - 论文骨架、贡献措辞、审稿人 Q&A
@@ -431,9 +431,20 @@ Prompt-only Qwen3.5-2B
 Central LoRA
 Local-only SPECTRA-Core
 FedAvg-LoRA
+FedAvg-LoRA-DP / DP-LoRA-style
 Fed-SB-style fixed-core
 SPECTRA-Core non-DP
 SPECTRA-FedCore DP
+```
+
+执行 gates：
+
+```text
+Gate 0: 数据、Qwen3.5-2B 加载、tokenizer、target modules、prompt rendering 冒烟通过
+Gate 1: one-seed 非 DP local/FL 能产生有效标签和非随机 Macro-F1
+Gate 2: one-seed DP epsilon=4 能产生有效 privacy ledger 和稳定 clipping rate
+Gate 3: one-seed P0 epsilon={8,4,2} 完整跑通
+Gate 4: 冻结超参后再启动三种子最终表格
 ```
 
 DP 主 sweep：
@@ -454,6 +465,8 @@ privacy_ledger.json
 communication.json
 hardware_profile.json
 client_label_histograms.json
+preprocessing_fingerprint.json
+budget_match.json
 run.log
 ```
 
@@ -487,6 +500,7 @@ K = 20 sensitivity
 participation = 0.5
 epsilon = 1
 source/protocol skew
+WUSTL-IIOT-2021 external validation
 cross-backbone check
 ```
 
@@ -567,6 +581,7 @@ cross-backbone check
 |---|---|---|
 | 2026-05-31 | 研究设计 v0.3 定稿；数据准备层完成；数据集就位 | Junze |
 | 2026-06-10 | 仓库初始化并推送到 GitHub；交接文档编写 | Junze |
+| 2026-06-23 | 实验设计升级到 v0.5；补齐 DP-LoRA-style baseline、执行 gates、budget matching、WUSTL-IIOT-2021 可选外部验证 | Codex |
 
 ---
 

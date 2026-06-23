@@ -29,6 +29,16 @@ Why this choice:
 
 Do not run a model-zoo comparison unless the main paper is already complete.
 
+## 1.1 Paper Narrative Anchor
+
+The paper should be written from the following starting point:
+
+> Small language models are becoming dense enough to act as capable local assistants. In privacy-sensitive vertical domains, the question is no longer only how to deploy a model at the edge, but how to let that model keep improving without sending raw data or API prompts to the cloud.
+
+For this project, the edge assistant is a Qwen3.5-2B IIoT security model. Federated learning gives it a collaborative evolution path; client-side DP makes the path auditable; SPECTRA-FedCore makes the update small enough and noise-aware enough to remain useful under edge budgets.
+
+Do not lead the paper with "we propose another adapter." Lead with private federated evolution of edge small language models, then introduce the public-spectral core as the mechanism that makes the story technically plausible.
+
 ## 2. Research Questions
 
 RQ1: Under client-side release DP, does SPECTRA-FedCore improve the privacy-utility-communication trade-off over FedAvg-LoRA and a Fed-SB-style fixed-core baseline?
@@ -38,6 +48,21 @@ RQ2: Under the same Qwen3.5-2B backbone and uploaded-coordinate budget, which ut
 RQ3: Are the conclusions stable under the mainstream Edge-IIoTset closed-set protocol, duplicate diagnostics, and a raw-file robustness check?
 
 The main paper should not claim that LLMs beat all tabular IDS models. Classical IDS baselines calibrate the task; the main claim is about private federated edge assistant adaptation.
+
+## 2.1 Claim Boundaries
+
+The paper should defend three claims, in this order:
+
+1. Edge small language models are now capable enough to serve as local security assistants, so privacy-preserving collaborative improvement is a timely edge-intelligence problem.
+2. Client-side release DP is a stronger and more auditable privacy setting than ordinary FL, but it damages adapter utility because the uploaded coordinates must be clipped and noised.
+3. SPECTRA-FedCore recovers utility by choosing the uploaded adaptation coordinates from public backbone spectra and allocating rank/noise according to public spectral structure and edge budgets.
+
+The paper should not defend these claims:
+
+- "Qwen3.5-2B is the best IDS classifier."
+- "Square-core adaptation is new by itself."
+- "Federated learning alone provides formal privacy."
+- "Record-level DP is achieved." The current guarantee is client-level upload release DP.
 
 ## 3. Data Protocol
 
@@ -69,6 +94,13 @@ val   = 15,774
 test  = 15,793
 ```
 
+Primary label space:
+
+```text
+Normal plus 14 attack classes
+label normalization: OS_Fingerprinting -> Fingerprinting
+```
+
 FL partition:
 
 ```text
@@ -84,6 +116,14 @@ Evaluation rules:
 - Fit scalers, quantile bins, feature filters, balancing, and prompt bins only on training data.
 - Do not use validation or test labels to tune prompt fields, DP parameters, clipping radii, or rank budgets.
 - Report duplicate or feature-hash overlap after removing excluded identifier-like fields.
+- Define rare labels from the training split only. The default policy is attack labels below the median attack-class count; save the exact rare-label list in every run artifact.
+
+Secondary dataset policy:
+
+- Do not add a second dataset before the main Edge-IIoTset P0/P1 tables are stable.
+- If the main result is strong and compute remains, use WUSTL-IIOT-2021 as the first appendix external validation because it is IIoT-specific and compact enough for controlled reruns.
+- ToN_IoT is a second-choice appendix dataset when the paper wants broader Industry 4.0/IoT coverage rather than a tight IIoT-only story.
+- Any secondary dataset must be reported as external validation, not as part of the core claim, unless its preprocessing and FL partition artifacts are fully frozen like Edge-IIoTset.
 
 ## 4. Prompt Protocol
 
@@ -140,6 +180,18 @@ no ablations
 goal = catch shape, tokenizer, adapter, and accountant errors
 ```
 
+Execution gates:
+
+```text
+Gate 0: data, model loading, tokenizer, target modules, and prompt rendering pass smoke checks
+Gate 1: one-seed non-DP local and FL runs produce valid labels and non-random macro-F1
+Gate 2: one-seed DP runs at epsilon=4 produce valid privacy ledgers and stable clipping rates
+Gate 3: full P0 main methods run for epsilon={8,4,2} on one seed
+Gate 4: three-seed reruns are launched only after the method list and hyperparameters are frozen
+```
+
+This keeps server time under control without changing the final statistical reporting standard.
+
 Main DP setting:
 
 ```text
@@ -171,6 +223,7 @@ Prompt-only Qwen3.5-2B
 Central LoRA
 Local-only SPECTRA-Core
 FedAvg-LoRA
+FedAvg-LoRA-DP / DP-LoRA-style
 Fed-SB-style fixed-core
 SPECTRA-Core non-DP
 SPECTRA-FedCore DP
@@ -209,13 +262,28 @@ MLP
 
 Classical baselines use numeric/tabular features, not prompts. They answer: how strong is the tabular task itself?
 
+Classical baseline protocol:
+
+- Use the same 80/10/10 split and the same excluded identifier-like columns.
+- Fit preprocessing only on the training split.
+- Use macro-F1 as the primary selection metric.
+- Use class weighting when supported; do not use synthetic oversampling in the primary table because it changes the data distribution and complicates comparison.
+- Report inference latency on the test split and model size where available.
+
 Adapter baselines:
 
 ```text
-FedAvg-LoRA
+FedAvg-LoRA non-DP
+FedAvg-LoRA-DP / DP-LoRA-style
 Fed-SB-style fixed-core
 SPECTRA-FedCore
 ```
+
+DP-LoRA handling:
+
+- Treat FedAvg-LoRA-DP as the controlled DP-LoRA-style baseline in our unified Qwen3.5-2B code path.
+- If time allows, cite and discuss DP-LoRA/DP-DyLoRA as external method references, but do not attempt a separate codebase reproduction unless P0 is complete.
+- The fairness target is the same client-level privacy accountant, same rounds, same local epochs, and reported communication/trainable-parameter budgets.
 
 Fed-SB handling:
 
@@ -230,16 +298,19 @@ Fairness constraints:
 - same client partition
 - same rounds and local epochs
 - same epsilon/delta and accountant convention for DP comparisons
-- report same uploaded MB/client/round and trainable parameter count
+- fixed hyperparameter search budget per method family
+- report uploaded MB/client/round, total uploaded MB, trainable parameter count, peak VRAM, and wall-clock time
+- when exact communication matching is impossible, create a budget-matched group whose uploaded MB differs by no more than 10%; otherwise label the row as capacity-matched rather than communication-matched
 
 ## 8. Result Tables
 
 Table 1: Main DP-FL result.
 
 ```text
-Rows: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
-Columns: epsilon, macro-F1, balanced accuracy, rare recall, uploaded MB/round, trainable params
+Rows: FedAvg-LoRA-DP/DP-LoRA-style, Fed-SB-style-DP, SPECTRA-FedCore-DP
+Columns: epsilon, macro-F1, balanced accuracy, rare recall, uploaded MB/round, total uploaded MB, trainable params
 Settings: K=10 Dirichlet alpha=0.5, Qwen3.5-2B
+Statistics: three seeds, mean +/- std, plus paired bootstrap CI against Fed-SB-style-DP
 ```
 
 Table 2: Non-DP and central/local context.
@@ -247,28 +318,31 @@ Table 2: Non-DP and central/local context.
 ```text
 Rows: Prompt-only, Central LoRA, Local-only SPECTRA, FedAvg-LoRA non-DP, SPECTRA non-DP
 Columns: macro-F1, balanced accuracy, rare recall, wall-clock, peak VRAM
+Purpose: show non-DP ceiling and how much utility is lost because of FL and DP
 ```
 
 Table 3: Classical IDS context.
 
 ```text
 Rows: Random Forest, XGBoost/LightGBM, MLP
-Columns: macro-F1, balanced accuracy, rare recall, inference latency
+Columns: macro-F1, balanced accuracy, rare recall, inference latency, model size
+Purpose: calibrate the tabular task without making tabular models the central contribution
 ```
 
 Table 4: SPECTRA ablation.
 
 ```text
 Rows: A0-A5
-Columns: macro-F1, rare recall, clipping rate, uploaded MB/round
+Columns: macro-F1, rare recall, clipping rate, noise scale summary, uploaded MB/round
 Primary epsilon: 4
+Statistics: one-seed screening first; repeat final reported ablation rows with three seeds when compute allows
 ```
 
 Table 5: Diagnostics and robustness.
 
 ```text
-Rows: main split, deduplicated sensitivity if needed, raw per-file 8/1/1 robustness
-Columns: duplicate rate, macro-F1 shift, method ranking stable yes/no
+Rows: main split, duplicate-filtered sensitivity if needed, raw per-file 8/1/1 robustness
+Columns: duplicate rate, feature-hash overlap, macro-F1 shift, rare recall shift, method ranking stable yes/no
 ```
 
 Table 6: Edge cost.
@@ -276,6 +350,7 @@ Table 6: Edge cost.
 ```text
 Rows: main adapter methods
 Columns: trainable params, uploaded MB/client/round, total MB, peak VRAM, latency, prompt length p95
+Purpose: support the edge-intelligence story with deployment-relevant costs
 ```
 
 ## 9. Figures
@@ -291,7 +366,7 @@ Figure 2: Privacy-utility curve.
 ```text
 x = epsilon
 y = macro-F1
-methods = FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
+methods = FedAvg-LoRA-DP/DP-LoRA-style, Fed-SB-style-DP, SPECTRA-FedCore-DP
 ```
 
 Figure 3: Communication Pareto.
@@ -319,12 +394,13 @@ Run experiments in this order:
 5. One local non-DP SPECTRA-Core run.
 6. One 3-round FL non-DP smoke run.
 7. One DP accountant smoke run at epsilon 4.
-8. Full non-DP central/local/federated context.
-9. Full DP-FL main table at epsilon 8, 4, 2.
+8. One-seed P0 DP-FL screen at epsilon 8, 4, 2.
+9. Full non-DP central/local/federated context.
 10. SPECTRA ablations at epsilon 4.
 11. Classical IDS context.
 12. Diagnostics and robustness.
-13. Final three-seed reruns for paper tables.
+13. Freeze hyperparameters and launch final three-seed P0/P1 reruns.
+14. Optional secondary WUSTL-IIOT-2021 or ToN_IoT validation only after the main paper tables are stable.
 
 ## 11. Per-Run Artifact Contract
 
@@ -338,6 +414,8 @@ privacy_ledger.json
 communication.json
 hardware_profile.json
 client_label_histograms.json
+preprocessing_fingerprint.json
+budget_match.json
 run.log
 ```
 
