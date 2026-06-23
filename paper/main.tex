@@ -1,0 +1,91 @@
+\documentclass[10pt]{article}
+
+\usepackage[a4paper,margin=0.8in]{geometry}
+\usepackage{times}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{url}
+\usepackage[hidelinks]{hyperref}
+\usepackage[nameinlink,noabbrev]{cleveref}
+\usepackage[numbers,sort&compress]{natbib}
+
+\newcommand{\method}{SPECTRA-FedCore}
+\newcommand{\core}{SPECTRA-Core}
+\newcommand{\dataset}{Edge-IIoTset}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+\newcommand{\placeholder}{\textemdash}
+
+\title{\method: Public-Spectral Private Federated Core Adaptation for Edge IIoT Security}
+
+\author{
+Anonymous Authors\\
+\small Anonymous Institution\\
+\small \texttt{anonymous@example.com}
+}
+
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\input{sections/00_abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+\input{sections/01_introduction}
+
+\section{Related Work}
+\label{sec:related}
+\input{sections/02_related_work}
+
+\section{Problem Formulation and Threat Model}
+\label{sec:problem}
+\input{sections/03_problem}
+
+\section{\method}
+\label{sec:method}
+\input{sections/04_method}
+
+\section{Experimental Design}
+\label{sec:experiments}
+\input{sections/05_experiments}
+
+\section{Results}
+\label{sec:results}
+\input{sections/06_results}
+
+\section{Discussion}
+\label{sec:discussion}
+\input{sections/07_discussion}
+
+\section{Conclusion}
+\label{sec:conclusion}
+\input{sections/08_conclusion}
+
+\section*{Reproducibility Statement}
+\input{sections/09_reproducibility}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\appendix
+\section{Additional Method Details}
+\label{app:method}
+\input{sections/a1_additional_method}
+
+\section{Additional Experiment Protocol}
+\label{app:protocol}
+\input{sections/a2_additional_protocol}
+
+\end{document}

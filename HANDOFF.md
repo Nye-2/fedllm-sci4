@@ -1,9 +1,9 @@
 # SPECTRA-FedCore 服务器交接文档
 
 > **收件人**：龙虾（服务器端实验负责人）  
-> **日期**：2026-06-10  
+> **日期**：2026-06-23  
 > **仓库**：https://github.com/JunzeCai/fedllm-sci4  
-> **项目状态**：数据准备层已完成，核心训练框架待实现  
+> **项目状态**：数据准备层已完成；主实验方案已固定为 Qwen3.5-2B；核心训练框架待实现  
 
 ---
 
@@ -15,13 +15,14 @@
 
 ---
 
-## 2. 当前完成状态（截至 2026-06-10）
+## 2. 当前完成状态（截至 2026-06-23）
 
 ### ✅ 已完成
 
 | 模块 | 状态 | 说明 |
 |---|---|---|
-| **研究设计文档** | ✅ | `docs/superpowers/specs/` 下 1313 行的 v0.3 文献校准版，包含完整数学公式、实验矩阵、消融设计、风险登记册 |
+| **研究设计文档** | ✅ | `docs/superpowers/specs/` 下 v0.3 文献校准版，包含完整数学公式、实验矩阵、消融设计、风险登记册 |
+| **最终实验方案** | ✅ | `docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`，固定 Qwen3.5-2B 和 P0/P1/P2 运行顺序 |
 | **数据准备层** | ✅ | `src/fedllm_data/` + `tests/`，覆盖 manifest、主 split、client partition、portable paths |
 | **方法核心工具** | ✅ | `src/spectra/`，NumPy 版 SVD basis、core adapter、DP accountant、FL aggregation、metrics，CPU synthetic tests 已覆盖 |
 | **Edge-IIoTset 数据集** | ✅ | 已下载并解压到 `data/raw/edgeiiotset/full/`，包含 14 个攻击 CSV、10 个正常 CSV、2 个合并 CSV |
@@ -35,14 +36,14 @@
 | 优先级 | 任务 | 预估工作量 | 阻塞项 |
 |---|---|---|---|
 | **P0** | 复现 Fed-SB 官方 SNLI 隐私联邦实验 | 1-2 天 | 服务器 GPU 环境 |
-| **P0** | 把 `src/spectra/` NumPy 数学核心接入 PyTorch/PEFT 训练层 | 2-3 天 | 需要服务器 GPU 环境 |
-| **P0** | 实现单服务器训练循环（K=10，IID + Dirichlet Non-IID） | 2-3 天 | 基础 client partition artifact 已生成 |
-| **P1** | 将客户端 DP 协议接入真实训练 upload path | 1-2 天 | NumPy accountant 已有，需接 PyTorch tensor |
-| **P1** | 层-wise 自适应秩/噪声分配 | 1-2 天 | 依赖 P0 的谱基模块 |
-| **P1** | 本地残差个性化 | 1 天 | 依赖 P0 的核心训练框架 |
-| **P2** | Edge-IIoT 非 DP 冒烟测试 | 0.5 天 | 依赖 P0 的谱基模块 |
-| **P2** | 非 LLM IDS 基线（XGBoost、RF、FT-Transformer） | 2-3 天 | 可用 sklearn + pytorch-tabular |
-| **P3** | 完整实验矩阵 + 论文图表 | 1-2 周 | 依赖所有 P0/P1 模块 |
+| **P0** | 加载 Qwen3.5-2B 并 inspect 可挂载目标模块 | 0.5 天 | 需要 transformers/modelscope 环境 |
+| **P0** | 把 `src/spectra/` 数学核心接入 PyTorch/PEFT 训练层 | 2-3 天 | 需要服务器 GPU 环境 |
+| **P0** | 实现单服务器训练循环（K=10，IID sanity + Dirichlet Non-IID） | 2-3 天 | 基础 client partition artifact 已生成 |
+| **P0** | 跑主实验：FedAvg-LoRA-DP、Fed-SB-style-DP、SPECTRA-FedCore-DP | 3-5 天 | 依赖训练层和 DP upload path |
+| **P1** | A0-A5 消融：谱基、rank、噪声、本地残差、shrinkage | 3-5 天 | 先固定 epsilon=4 |
+| **P1** | 非 LLM IDS 基线（XGBoost/LightGBM、RF、MLP） | 1-2 天 | 可用 sklearn + xgboost/lightgbm |
+| **P1** | 泄露诊断、raw per-file robustness、论文图表 | 2-4 天 | 依赖主实验结果 |
+| **P2** | K=20、partial participation、epsilon=1、cross-backbone | 可选 | 主论文结果稳定后再跑 |
 
 ---
 
@@ -322,7 +323,10 @@ test  = 15,793
 
 ### 必读（按顺序）
 
-1. **`docs/superpowers/specs/2026-05-31-spectra-dp-fedcore-design.md`**  
+1. **`docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`**  
+   **这是服务器实验执行手册**。优先读它，按 P0/P1/P2 顺序跑，不要一上来跑完整模型动物园。
+
+2. **`docs/superpowers/specs/2026-05-31-spectra-dp-fedcore-design.md`**  
    **这是整个项目的宪法**。1313 行，涵盖：
    - 研究问题（RQ1-RQ5）和可检验假设（H1-H5）
    - 与 Fed-SB 的碰撞边界（什么不能声称、什么可以声称）
@@ -332,10 +336,10 @@ test  = 15,793
    - 风险登记册（9 项风险及缓解）
    - 论文骨架、贡献措辞、审稿人 Q&A
 
-2. **`data/README.md`**  
+3. **`data/README.md`**  
    数据集清单、SHA-256 校验值、下载地址、已生成产物说明。
 
-3. **`docs/superpowers/plans/2026-05-31-data-preparation.md`**  
+4. **`docs/superpowers/plans/2026-05-31-data-preparation.md`**  
    数据准备层的详细实施计划（已执行完毕，可作为后续模块的参考模板）。
 
 ### 快速参考
@@ -344,7 +348,7 @@ test  = 15,793
 |---|---|
 | 方法数学公式 | specs 第 5 节 "Method" |
 | DP 协议细节 | specs 第 5.4-5.6 节 |
-| 实验矩阵 | specs 第 9.1 节 "SCI Experiment Matrix" |
+| 实验矩阵 | `docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md` 第 8-10 节 |
 | 消融设计 | specs 第 11 节 "Ablations" |
 | 复现性清单 | specs 第 12 节 "Reproducibility Checklist" |
 | 论文贡献措辞 | specs 第 13 节 "Paper Contribution Wording" |
@@ -358,9 +362,32 @@ test  = 15,793
 
 ## 6. 接下来要做的具体实验（龙虾的重点工作）
 
-### 阶段 1：环境验证（第 1-2 天）
+### 阶段 0：先锁死主设定
 
-1. **跑通基础测试**：`python -m compileall src scripts && python -m pytest -q` → 17 passed
+主实验固定：
+
+```text
+backbone = Qwen/Qwen3.5-2B
+source = ModelScope
+input_modality = text_only
+dataset = ML-EdgeIIoT selected CSV
+task = 15-class closed-set IDS
+split = 80/10/10 stratified, seed 20260531
+clients = K=10
+main non-IID = Dirichlet label skew alpha=0.5
+privacy = client-level upload DP
+epsilon sweep = {8, 4, 2}; epsilon=1 optional
+```
+
+不要先跑 Llama/Gemma cross-backbone，也不要先跑 K=20。那些是 P2。
+
+### 阶段 1：环境验证与官方基线复现（第 1-2 天）
+
+1. **跑通基础测试**：
+   ```bash
+   python -m compileall src scripts
+   python -m pytest -q
+   ```
 2. **复现 Fed-SB SNLI 联邦隐私实验**：
    ```bash
    bash scripts/run_fedsb_snli_fed_private.sh
@@ -368,47 +395,102 @@ test  = 15,793
    目的：验证 Fed-SB 代码在服务器 GPU 上能跑通、验证隐私会计路径、记录基线性能。
 3. **确认 Edge-IIoTset 数据完整性**：核对 `data/raw/edgeiiotset/full/` 下有 14 attack + 10 normal + 2 selected CSV，总约 26 个文件。
 
-### 阶段 2：核心模块实现（第 3-10 天）
+### 阶段 2：Qwen3.5-2B 接入与最小冒烟（第 3-6 天）
 
 4. **公开谱基构造**（`src/spectra/` 或类似目录）：
-   - 加载 `google/gemma-4-E2B-it`（4-bit 量化）
-   - 对目标层（先 `q_proj`, `v_proj`）做截断 SVD
+   - 主线加载 `Qwen/Qwen3.5-2B`（ModelScope: `Qwen/Qwen3.5-2B`；优先 4-bit 或 8-bit 量化，fp16 作为可行性兜底）
+   - 仅使用 text/language pathway；不输入图像，不使用 vision-specific supervision
+   - 先 inspect 模型模块名，再确定目标层；初稿先尝试 attention 中的 `q_proj`, `v_proj`，若 Qwen3.5 实际命名不同则在配置中记录映射
+   - 对目标层做截断 SVD
    - 保存 `U_{l,p}`、`V_{l,p}` 和谱能量 `E_l(p)`
    - 实现核心参数化 `Delta W = gamma * U * C * V^T`
 
-5. **最小可复现 Edge-IIoT 流水线**：
+5. **Prompt-only 和 tokenizer 冒烟**：
+   - 读取 prompt smoke samples
+   - 只生成/抽取 15 类标签
+   - 记录 prompt token length、label extraction failure rate
+
+6. **最小可复现 Edge-IIoT 流水线**：
    - 数据转换：把 CSV 行转为指令格式
    - 本地训练：冻结骨干 + 训练公开谱核心（非 DP，先冒烟）
    - 评估：15 类分类 Macro-F1
    - 目标：先让非 DP 版本在本地数据上能学到东西
 
-6. **单服务器 FL 模拟**：
+7. **3-5 轮 FL 冒烟**：
    - K=10 客户端
-   - IID 分区（均匀随机）做 sanity check
-   - Dirichlet(α=0.5) 标签偏斜做主 Non-IID 实验
+   - 先 IID sanity，再 Dirichlet(α=0.5)
    - 每轮：服务器广播全局核心 → 客户端本地训练 → 客户端上传 → 服务器平均聚合
+   - 目标：确认参数形状、聚合、保存、评估、日志都通
 
-### 阶段 3：DP 与高级模块（第 11-20 天）
+### 阶段 3：P0 主实验（第 7-16 天）
 
-7. **客户端 DP 协议**：
-   - 全局裁剪 + 均匀噪声基线
-   - RDP 会计（保守无采样放大版本）
-   - 验证 accountant 输出与 epsilon 目标一致
+P0 只跑最小可发表主线：
 
-8. **层自适应分配**：
-   - 谱能量驱动的 `p_l` 分配
-   - 层自适应裁剪半径 `R_l` 和噪声 `s_l`
-   - 消融：uniform `p_l` + uniform noise → spectrum-adaptive `p_l` + uniform noise → spectrum-adaptive `p_l` + layer-adaptive noise
+```text
+Prompt-only Qwen3.5-2B
+Central LoRA
+Local-only SPECTRA-Core
+FedAvg-LoRA
+Fed-SB-style fixed-core
+SPECTRA-Core non-DP
+SPECTRA-FedCore DP
+```
 
-9. **本地残差 + 服务器后处理**：
-   - 每个客户端维护一个不上传的 `P_{k,l}`
-   - 服务器对聚合核心做收缩平滑
+DP 主 sweep：
 
-### 阶段 4：完整实验（第 21-35 天）
+```text
+epsilon = 8, 4, 2
+delta = 1e-5
+accountant = conservative RDP without sampling amplification
+```
 
-10. **主实验矩阵**：按 specs 第 9.1 节的 Table 1-6 逐一运行
-11. **非 LLM 基线**：RF、XGBoost、FT-Transformer、MLP-FedAvg
-12. **结果整理**：脚本化所有图表和表格，确保种子固定、可复现
+每个 run 必须保存：
+
+```text
+config_resolved.json
+metrics.json
+metrics_by_class.json
+privacy_ledger.json
+communication.json
+hardware_profile.json
+client_label_histograms.json
+run.log
+```
+
+### 阶段 4：P1 消融与诊断（第 17-25 天）
+
+消融只在 `epsilon=4` 上先跑，避免开局爆算力：
+
+```text
+A0 Random orthogonal basis + uniform rank + global DP
+A1 Public SVD basis + uniform rank + global DP
+A2 Public SVD basis + spectral rank + global DP
+A3 Public SVD basis + spectral rank + layer-adaptive DP
+A4 A3 + local residual
+A5 A4 + shrinkage post-processing
+```
+
+诊断：
+
+- duplicate / feature-hash overlap
+- deduplicated sensitivity if needed
+- raw per-file 8/1/1 robustness if main result稳定
+- clipping rate by layer and round
+- prompt token length distribution
+
+### 阶段 5：P2 可选扩展（第 26 天以后）
+
+只有 P0/P1 结果足够清楚后再跑：
+
+```text
+K = 20 sensitivity
+participation = 0.5
+epsilon = 1
+source/protocol skew
+cross-backbone check
+```
+
+这部分不是主论文成败项。主论文先把 Qwen3.5-2B 上的 DP-FL 故事讲透。
 
 ---
 
@@ -431,7 +513,7 @@ test  = 15,793
 ### 7.3 基线相关
 
 - **Fed-SB 是最强算法基线**，必须公平对比。对比维度三个：相同隐私预算、相同通信量、相同可训练参数。
-- 如果 Fed-SB 直接适配 Gemma 4 E2B 失败，保留一个"Fed-SB-style fixed-core baseline"在我们自己的代码路径中实现，并明确标注差异。
+- 如果 Fed-SB 直接适配 Qwen3.5-2B 失败，保留一个"Fed-SB-style fixed-core baseline"在我们自己的代码路径中实现，并明确标注差异。
 
 ### 7.4 论文相关
 
@@ -474,7 +556,7 @@ test  = 15,793
 
 1. **FL 引擎选择**：自研轻量级 FL 模拟（如 specs 暗示）还是引入 Flower/FedML？建议自研以保持可控。
 2. **DP 会计库**：Opacus、Google DP Library、还是自研 RDP accountant？建议先自研保守版本，确保透明可控。
-3. **量化方案**：是否使用 bitsandbytes 4-bit 训练？Gemma 4 E2B 较小，也可能用 8-bit 或 fp16。
+3. **量化方案**：是否使用 bitsandbytes 4-bit 训练？Qwen3.5-2B 足够小，8-bit 或 fp16 也可能可行；服务器先做显存冒烟测试再定 batch size。
 4. **计算预算**：服务器 GPU 型号和数量？这决定了 batch size、层扩展范围、以及是否跑 K=20 敏感性实验。
 
 ---

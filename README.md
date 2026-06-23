@@ -9,6 +9,7 @@ The repository is currently structured to make the server handoff reproducible b
 - `scripts/prepare_datasets.py`: regenerates portable dataset artifacts.
 - `HANDOFF.md`: server execution guide.
 - `docs/superpowers/specs/2026-05-31-spectra-dp-fedcore-design.md`: paper-level design.
+- `docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`: final Qwen3.5-2B experiment protocol.
 
 ## Quick Check
 
@@ -46,10 +47,17 @@ Important generated artifacts:
 
 Main paper protocol:
 
+- Backbone: `Qwen/Qwen3.5-2B` from ModelScope, text-only telemetry prompts
 - Dataset: `ML-EdgeIIoT-dataset.csv`
 - Task: normalized 15-class closed-set intrusion classification
 - Split: 80/10/10 stratified row-level split, fixed seed `20260531`
 - FL simulation: one server process, `K=10` clients, IID sanity plus Dirichlet label-skew `alpha=0.5`
-- Privacy: client-level release DP, not record-level DP
+- Privacy: client-level release DP, not record-level DP; main epsilon sweep `{8, 4, 2}` with epsilon `1` optional
 
-The method novelty should be framed around public-backbone spectral bases, budget-aware rank/noise allocation, and client-side DP utility recovery. Do not claim that training a square core alone is novel; Fed-SB is the closest baseline and must be evaluated seriously.
+Minimum paper comparison:
+
+- classical IDS context: Random Forest, XGBoost/LightGBM, MLP
+- adapter baselines: Prompt-only Qwen3.5-2B, Central LoRA, FedAvg-LoRA, Fed-SB-style fixed-core
+- method variants: SPECTRA-Core non-DP, SPECTRA-FedCore DP, and the A0-A5 utility-recovery ablation
+
+The method novelty should be framed around public-backbone spectral bases, budget-aware rank/noise allocation, and client-side DP utility recovery. Do not claim that training a square core alone is novel; Fed-SB is the closest baseline and must be evaluated seriously. See the final protocol before launching GPU runs.

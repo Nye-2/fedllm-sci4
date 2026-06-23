@@ -1,0 +1,18 @@
+\subsection{Primary Dataset Artifacts}
+The primary split artifact is \texttt{data/processed/edgeiiot/selected\_ml\_stratified\_split\_seed20260531.json}. The primary non-IID client partition artifact is \texttt{data/processed/edgeiiot/selected\_ml\_clients\_seed20260531\_K10\_alpha0.5.json}. These artifacts should be regenerated only through the versioned preparation script and with documented seeds.
+
+\subsection{Minimum Server Run Order}
+The recommended execution order is:
+\begin{enumerate}[leftmargin=*]
+  \item verify raw \dataset{} and SNLI data checks;
+  \item reproduce the public Fed-SB private SNLI experiment;
+  \item load Qwen3.5-2B, inspect target module names, and confirm text-only prompt formatting;
+  \item run prompt-only and local non-DP \core{} smoke tests on \dataset{};
+  \item run a 3--5 round non-DP FL smoke test;
+  \item run the P0 main methods, including FedAvg-LoRA-DP, Fed-SB-style-DP, and \method{}-DP for $\epsilon\in\{8,4,2\}$;
+  \item run the A0--A5 utility-recovery ablations at $\epsilon=4$;
+  \item run classical IDS context, diagnostics, robustness, and optional P2 sensitivity checks.
+\end{enumerate}
+
+\subsection{Result Logging Contract}
+Each run should export a machine-readable result file containing method name, experiment tier, seed, split id, client partition id, Qwen3.5-2B checkpoint or revision, model source, input modality, adapter target modules, trainable parameter count, uploaded MB per round, total transmitted MB, privacy ledger path, final macro-F1, balanced accuracy, per-class recall, rare attack recall, peak VRAM, wall-clock time, prompt length statistics, label extraction failure rate, and inference latency.

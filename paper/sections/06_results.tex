@@ -1,0 +1,21 @@
+This section is intentionally a scaffold until server experiments are complete. The final version should be written answer-first: each subsection should state the empirical finding, then show the supporting table or figure.
+
+\subsection{Main DP-FL Trade-Off}
+\todo{Insert Table~\ref{tab:main_results}: FedAvg-LoRA-DP, Fed-SB-style-DP, and \method{}-DP under $\epsilon\in\{8,4,2\}$ on the K=10 Dirichlet $\alpha=0.5$ setting.}
+
+\subsection{Non-DP and Local/Central Context}
+\todo{Insert context table for prompt-only Qwen3.5-2B, centralized LoRA, local-only \core{}, FedAvg-LoRA non-DP, and \core{} non-DP.}
+
+\subsection{Ablation of DP Utility Recovery}
+\todo{Insert A0-A5 ablation table at $\epsilon=4$: random basis, public SVD basis, spectral rank allocation, layer-adaptive DP, local residual, and shrinkage.}
+
+\subsection{Classical IDS Context}
+\todo{Insert Random Forest, XGBoost/LightGBM, and MLP table. The expected framing is that tabular models may remain strong on centralized classification, while \method targets private federated language-model adaptation under communication and privacy constraints.}
+
+\subsection{Leakage Diagnostics and Robustness}
+\todo{Insert duplicate-overlap diagnostics, deduplicated sensitivity if required, raw-file robustness results, and K=20 client sensitivity if compute permits.}
+
+\subsection{Edge Cost Analysis}
+\todo{Insert communication, peak VRAM, wall-clock, inference latency, and prompt length distributions.}
+
+\input{tables/results_placeholders}

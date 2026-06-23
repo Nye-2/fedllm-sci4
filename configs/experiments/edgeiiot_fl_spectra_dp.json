@@ -1,5 +1,6 @@
 {
   "seed": 20260531,
+  "paper_protocol": "docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md",
   "output_dir": "outputs/edgeiiot_fl_spectra_dp",
   "data": {
     "dataset": "edgeiiot_ml",
@@ -24,13 +25,20 @@
     "clients": 10,
     "partition": "dirichlet",
     "dirichlet_alpha": 0.5,
+    "iid_sanity": true,
     "rounds": 50,
+    "debug_rounds": 5,
     "local_epochs": 1,
     "participation_rate": 1.0,
-    "aggregation": "weighted_fedavg"
+    "aggregation": "weighted_fedavg",
+    "final_table_seeds": [20260531, 20260532, 20260533]
   },
   "model": {
-    "backbone": "server_selected_small_lm",
+    "backbone": "Qwen/Qwen3.5-2B",
+    "model_source": "modelscope",
+    "modelscope_id": "Qwen/Qwen3.5-2B",
+    "input_modality": "text_only",
+    "target_module_policy": "inspect_then_bind",
     "target_modules": ["q_proj", "v_proj"],
     "adapter": "spectra_core",
     "candidate_ranks": [4, 8, 16, 32],
@@ -46,10 +54,33 @@
     "adjacency": "replace_one",
     "delta": 1e-5,
     "target_epsilon": 4.0,
+    "epsilon_sweep": [8.0, 4.0, 2.0],
+    "optional_epsilon": [1.0],
     "accountant": "conservative_rdp",
     "clipping": "layerwise",
     "noise_allocation": "layerwise_spectrum",
     "report_ledger": true
+  },
+  "experiment_matrix": {
+    "p0_main_methods": [
+      "prompt_only_qwen35",
+      "central_lora",
+      "local_only_spectra_core",
+      "fedavg_lora",
+      "fedsb_style_fixed_core",
+      "spectra_core_non_dp",
+      "spectra_fedcore_dp"
+    ],
+    "p1_ablation_methods": [
+      "A0_random_basis_uniform_rank_global_dp",
+      "A1_public_svd_uniform_rank_global_dp",
+      "A2_public_svd_spectral_rank_global_dp",
+      "A3_public_svd_spectral_rank_layer_dp",
+      "A4_A3_local_residual",
+      "A5_A4_shrinkage"
+    ],
+    "classical_baselines": ["random_forest", "xgboost_or_lightgbm", "mlp"],
+    "p2_optional": ["K20_sensitivity", "participation_0.5", "epsilon_1", "cross_backbone_check"]
   },
   "metrics": {
     "primary": "macro_f1",

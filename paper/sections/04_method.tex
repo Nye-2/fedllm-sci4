@@ -1,0 +1,145 @@
+\subsection{Public Spectral Core Adapter}
+\label{sec:public_spectral_core}
+For a target linear layer $\ell$ with public frozen backbone weight
+\begin{equation}
+  W_{\ell}^{0} \in \R^{d_{\mathrm{out}}\times d_{\mathrm{in}}},
+\end{equation}
+\method computes a truncated singular value decomposition from the released checkpoint:
+\begin{equation}
+  W_{\ell}^{0} = U_{\ell}\Sigma_{\ell}V_{\ell}^{\top}.
+\end{equation}
+The first $p_{\ell}$ singular vectors define fixed public bases $U_{\ell,p}\in\R^{d_{\mathrm{out}}\times p_{\ell}}$ and $V_{\ell,p}\in\R^{d_{\mathrm{in}}\times p_{\ell}}$. These bases are not trained and are reproducible from the same public checkpoint.
+
+Client $k$ represents its uploadable layer update through a small core:
+\begin{equation}
+  \Delta W_{\ell,k} =
+  \gamma_{\ell} U_{\ell,p} C_{\ell,k} V_{\ell,p}^{\top},
+  \quad C_{\ell,k}\in\R^{p_{\ell}\times p_{\ell}}.
+  \label{eq:core_update}
+\end{equation}
+Because the bases have orthonormal columns, every update in the selected subspace has unique core coordinates:
+\begin{equation}
+  C_{\ell} = U_{\ell,p}^{\top}\Delta W_{\ell}V_{\ell,p}.
+\end{equation}
+This removes the factor-gauge ambiguity inside the chosen subspace and makes aggregation linear:
+\begin{equation}
+  \sum_k q_k U_{\ell,p}C_{\ell,k}V_{\ell,p}^{\top}
+  =
+  U_{\ell,p}\left(\sum_k q_k C_{\ell,k}\right)V_{\ell,p}^{\top}.
+\end{equation}
+
+\subsection{Global Core and Local Residual}
+At communication round $t$, the server broadcasts a global core $G_{\ell}^{(t)}$. Client $k$ trains an uploadable global-path delta $D_{k,\ell}^{(t)}$ and a persistent local residual core $P_{k,\ell}$. The local adapter is
+\begin{equation}
+  \Delta W_{k,\ell}^{(t)}
+  =
+  \gamma_{\ell}U_{\ell,p}
+  \left(G_{\ell}^{(t)} + D_{k,\ell}^{(t)}
+  + \lambda_p P_{k,\ell}\right)
+  V_{\ell,p}^{\top}.
+  \label{eq:local_residual}
+\end{equation}
+Only $D_{k,\ell}^{(t)}$ is uploaded. The residual $P_{k,\ell}$ remains local, so it can improve client-personalized utility under device or attack skew without spending additional privacy or communication budget.
+
+\subsection{Public Spectrum-Driven Rank Allocation}
+For each layer, define the retained public spectral energy
+\begin{equation}
+  E_{\ell}(p)
+  =
+  \frac{\sum_{i=1}^{p}\sigma_{\ell,i}^{2}}
+       {\sum_i\sigma_{\ell,i}^{2}}.
+\end{equation}
+The layer ranks are selected by a bounded public allocation problem:
+\begin{align}
+  \max_{\{p_{\ell}\}} \quad
+  & \sum_{\ell} a_{\ell} E_{\ell}(p_{\ell}) \\
+  \mathrm{s.t.}\quad
+  & \sum_{\ell}p_{\ell}^{2}\le B_{\mathrm{param}}, \\
+  & \sum_{\ell} b p_{\ell}^{2}\le B_{\mathrm{comm}}, \\
+  & p_{\ell}\in \mathcal{P}.
+\end{align}
+Here $\mathcal{P}=\{4,8,16,32\}$ in the planned experiments, $b$ is the number of serialized bits per scalar, and $a_{\ell}$ is computed without private data. The main comparison includes uniform ranks, energy-maximizing allocation, and energy-per-parameter allocation.
+
+\subsection{Client-Side Release DP}
+The baseline upload protocol concatenates all uploadable cores:
+\begin{equation}
+  u_k^{(t)}=\mathrm{concat}_{\ell}\left(\mathrm{vec}(D_{k,\ell}^{(t)})\right).
+\end{equation}
+The client clips and releases
+\begin{align}
+  u_k^{c,t}
+  &=
+  u_k^{(t)}
+  \min\left(1,\frac{R_t}{\norm{u_k^{(t)}}_2}\right),\\
+  \widetilde{u}_k^{(t)}
+  &=
+  u_k^{c,t}+z_k^{(t)},\quad
+  z_k^{(t)}\sim\mathcal{N}(0,s_t^2I).
+\end{align}
+For replace-one client adjacency, the sensitivity is $\Delta_t=2R_t$. The Gaussian mechanism has RDP at order $\alpha$:
+\begin{equation}
+  \epsilon_t(\alpha)
+  =
+  \frac{\alpha \Delta_t^2}{2s_t^2}
+  =
+  \frac{2\alpha R_t^2}{s_t^2}.
+\end{equation}
+The composed RDP guarantee for a participating client is summed over its participating rounds and converted to $(\epsilon,\delta)$ by
+\begin{equation}
+  \epsilon(\delta)=
+  \min_{\alpha>1}
+  \epsilon_{\mathrm{total}}(\alpha)
+  +\frac{\log(1/\delta)}{\alpha-1}.
+\end{equation}
+The first implementation reports conservative no-amplification accounting. Sampling amplification can be added as an appendix variant after the main protocol is stable.
+
+\subsection{Layer-Adaptive Noise Allocation}
+The full method clips and noises each layer separately:
+\begin{align}
+  D_{k,\ell}^{c,t}
+  &=
+  D_{k,\ell}^{(t)}
+  \min\left(1,\frac{R_{\ell,t}}{\norm{D_{k,\ell}^{(t)}}_F}\right),\\
+  \widetilde{D}_{k,\ell}^{(t)}
+  &=
+  D_{k,\ell}^{c,t}+Z_{k,\ell}^{(t)},\quad
+  Z_{k,\ell}^{(t)}\sim\mathcal{N}(0,s_{\ell,t}^2I).
+\end{align}
+Given a per-round RDP budget $\rho_{\alpha}$, the method allocates variances by minimizing weighted expected perturbation:
+\begin{align}
+  \min_{\{s_{\ell}^{2}\}} \quad
+  & \sum_{\ell} w_{\ell}d_{\ell}s_{\ell}^{2}\\
+  \mathrm{s.t.}\quad
+  & \sum_{\ell}\frac{\alpha\Delta_{\ell}^{2}}{2s_{\ell}^{2}}
+  \le \rho_{\alpha},
+\end{align}
+where $d_{\ell}=p_{\ell}^{2}$ and $w_{\ell}$ is derived from public spectral energy. The resulting closed-form allocation is
+\begin{equation}
+  s_{\ell}^{2} =
+  \sqrt{\frac{(\alpha \Delta_{\ell}^{2}/2)}
+             {w_{\ell}d_{\ell}}}
+  \frac{
+  \sum_j \sqrt{(\alpha\Delta_j^2/2)w_jd_j}}
+  {\rho_{\alpha}}.
+\end{equation}
+This component is evaluated against global clipping with uniform noise.
+
+\subsection{Aggregation and Post-Processing}
+The server aggregates privatized updates:
+\begin{equation}
+  \bar{u}^{(t)} = \sum_{k\in\mathcal{I}_t} q_{k,t}\widetilde{u}_k^{(t)}
+\end{equation}
+and unpacks them into layer cores:
+\begin{equation}
+  G_{\ell}^{(t+1)} = G_{\ell}^{(t)} + \bar{D}_{\ell}^{(t)}.
+\end{equation}
+Optional shrinkage post-processing applies $\widehat{D}_{\ell}^{(t)}=\omega_{\ell}\bar{D}_{\ell}^{(t)}$ with $\omega_{\ell}\in[0,1]$ derived from public or DP-safe transcript statistics. Since post-processing is applied only to already privatized updates, it consumes no additional privacy budget, but it must be ablated.
+
+\begin{figure}[t]
+  \centering
+  \input{figures/system_overview}
+  \caption{Planned overview of \method. Fixed public spectral bases are computed once from the released backbone. Clients train uploadable global cores and local residual cores; only clipped and noised global-core updates are sent to the server.}
+  \label{fig:system_overview}
+\end{figure}
+
+\input{tables/method_components}

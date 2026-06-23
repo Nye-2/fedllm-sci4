@@ -1,10 +1,12 @@
 # SPECTRA-FedCore Research Design
 
 Date: 2026-05-31
-Status: v0.3 literature-calibrated SCI-oriented research design
+Status: v0.4 Qwen3.5-2B-aligned SCI-oriented research design
 Working title: SPECTRA-FedCore: Public-Spectral Private Federated Core Adaptation for Edge IIoT Security
 
 Name note: use `SPECTRA-FedCore` as the short working method name during experiments. The final paper title can add "client-side DP" or "differentially private" after results and framing are settled.
+
+Execution note: the final server-facing experiment protocol is `docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`. This design document preserves the full rationale, formulas, and reviewer-facing framing; the 2026-06-23 plan controls run order and minimum experiment scope.
 
 ## 1. One-Sentence Positioning
 
@@ -128,14 +130,18 @@ The introduction should move through four steps:
 Primary backbone:
 
 ```text
-google/gemma-4-E2B-it
+Qwen/Qwen3.5-2B
 ```
 
-Use a 4-bit quantized frozen backbone for training experiments where supported, with trainable public-spectral core adapters. Deployment is framed as edge inference with merged or separately loaded adapters.
+Use a 4-bit or 8-bit quantized frozen backbone for training experiments where supported, with trainable public-spectral core adapters. FP16 is acceptable for server-side simulation if memory allows. Deployment is framed as edge inference with merged or separately loaded adapters.
+
+Although Qwen3.5-2B supports multimodal use, this paper uses only the text/language pathway. Edge-IIoT telemetry is rendered as text prompts; no image input, vision encoder signal, or multimodal supervision is used in the main benchmark.
+
+Optional cross-backbone checks such as Llama 3.2 1B/3B or Gemma 3 1B are future or appendix work, not part of the main experimental claim.
 
 Important wording:
 
-- Claim: Gemma 4 E2B is suitable for edge/on-device inference evaluation.
+- Claim: Qwen3.5-2B is a recent edge-relevant compact small language model backbone in the 0.5--3B range.
 - Do not claim that full fine-tuning, or even PEFT training, is guaranteed to fit on the most constrained edge devices.
 - Use the phrase "edge or near-edge gateway adaptation" for training, and "edge deployment" for inference.
 
@@ -537,12 +543,12 @@ Default single-server FL simulation:
 
 ```text
 K = 10 clients
-participation = 100% for initial sanity, then 20%-50% for FL sweeps
-rounds = {20, 50} depending on compute
+participation = 100% for main reproducibility
+rounds = 5 for debugging, 50 for main runs
 local epochs = 1
 seeds = 3
 primary non-IID = Dirichlet label-skew with alpha = 0.5
-secondary sensitivity = K = 20 clients if server time allows
+optional sensitivity = K = 20, participation = 0.5, epsilon = 1
 ```
 
 ## 9. Baselines
@@ -561,9 +567,9 @@ Reproduction strategy:
 1. Reproduce Fed-SB's official private federated SNLI experiment first, without changing the method. This verifies the environment, privacy path, and expected outputs.
 2. Record the exact commit hash, dependencies, command line, GPU type, and privacy parameters.
 3. Adapt Fed-SB to the Edge-IIoT instruction dataset with minimal changes: data loader, prompt formatter, label parsing, and metrics.
-4. Run `Fed-SB-original` using its recommended settings where compatible.
-5. Run `Fed-SB-budget-matched` under our communication/trainable-parameter/privacy budgets.
-6. If direct adaptation to Gemma 4 E2B fails, implement a Fed-SB-style baseline in our code path and clearly mark the difference.
+4. Try a faithful Fed-SB adaptation where compatible.
+5. If direct adaptation to Qwen3.5-2B is brittle, implement a clearly labeled `Fed-SB-style fixed-core` baseline in our code path.
+6. Run the Fed-SB-style baseline under matched privacy, communication, and trainable-parameter budgets.
 
 The comparison should not only match LoRA rank. Rank can be misleading because different methods have different trainable parameters, communication payloads, initialization costs, and privacy mechanisms. Use three fair comparison regimes:
 
@@ -576,10 +582,10 @@ The comparison should not only match LoRA rank. Rank can be misleading because d
 3. Same trainable-parameter budget:
    Match the total number of trainable adapter parameters. This separates "better representation" from "more parameters".
 
-Fed-SB should be run in two forms if compute allows:
+Fed-SB should be handled in two layers:
 
-- Fed-SB-original: faithful public implementation with its update-based initialization and recommended settings, adapted only as needed to the same backbone and Edge-IIoT prompts.
-- Fed-SB-budget-matched: adjusted to match SPECTRA-FedCore's trainable parameter and communication budgets.
+- Fed-SB official reproduction: unchanged SNLI private FL run to verify the public code and environment.
+- Fed-SB-style fixed-core Edge-IIoT baseline: controlled implementation under the same Qwen3.5-2B backbone, prompt renderer, FL schedule, and budgets.
 
 This avoids handicapping the baseline while still showing whether the public-spectral, private-data-free design is competitive under edge and privacy budgets.
 
@@ -587,42 +593,42 @@ This avoids handicapping the baseline while still showing whether the public-spe
 
 The experiment plan should be staged so that every table answers one reviewer question.
 
-Table 1: Main utility under realistic FL.
+Table 1: Main DP-FL result.
 
 ```text
 Dataset split: ML-EdgeIIoT 80/10/10 stratified row-level split
-FL setting: single-server simulation, K=10 clients, IID sanity and label-skew non-IID
+FL setting: single-server simulation, K=10 clients, Dirichlet alpha=0.5
 Task: 15-class fine-grained IDS
-Privacy: epsilon in {8, 4, 2, 1}, delta = 1e-5 or 1/N_clients^1.1
-Methods: FedAvg-LoRA, Fed-SB-original, Fed-SB-budget-matched, SPECTRA-LDP-Core, full SPECTRA-FedCore
-Metrics: Macro-F1, balanced accuracy, rare attack recall, uploaded MB/round
+Privacy: epsilon in {8, 4, 2}, delta = 1e-5
+Methods: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
+Metrics: Macro-F1, balanced accuracy, rare attack recall, uploaded MB/round, trainable parameters
 ```
 
-Table 2: Fairness-controlled comparison.
+Table 2: Non-DP and central/local context.
 
 ```text
-Regime A: same epsilon, same rounds, same participation
-Regime B: same uploaded MB/client/round
-Regime C: same trainable adapter parameters
-Report: Macro-F1, rare recall, peak VRAM, wall-clock time
+Methods: prompt-only Qwen3.5-2B, centralized LoRA, local-only SPECTRA-Core, FedAvg-LoRA non-DP, SPECTRA-Core non-DP
+Purpose: establish non-DP ceiling and local/central context
+Report: Macro-F1, balanced accuracy, rare recall, peak VRAM, wall-clock time
 ```
 
 Table 3: Non-LLM IDS context.
 
 ```text
-Methods: Random Forest, XGBoost/LightGBM, FT-Transformer, MLP-FedAvg, SPECTRA-FedCore
+Methods: Random Forest, XGBoost/LightGBM, MLP
 Purpose: show that classical models remain strong on pure tabular classification, while SPECTRA targets private federated edge assistant trade-offs
 ```
 
 Table 4: Ablation of utility recovery under client-side DP.
 
 ```text
-SPECTRA-Core no DP
-SPECTRA-LDP global clipping + uniform noise
-+ public spectrum rank allocation
-+ layer-adaptive clipping/noise
-+ local residual
-+ shrinkage post-processing
+A0 Random orthogonal basis + uniform rank + global DP
+A1 Public SVD basis + uniform rank + global DP
+A2 Public SVD basis + spectral rank + global DP
+A3 Public SVD basis + spectral rank + layer-adaptive DP
+A4 A3 + local residual
+A5 A4 + shrinkage post-processing
+Primary epsilon: 4
 ```
 
 Table 5: Reproducibility and leakage diagnostics.
@@ -631,7 +637,7 @@ Table 5: Reproducibility and leakage diagnostics.
 Main stratified split duplicate diagnostics
 Deduplicated sensitivity if feature-hash overlap is material
 Raw full-package per-file 8/1/1 robustness split
-K=20 client sensitivity if compute allows
+K=20, partial participation, and epsilon=1 are optional after P0/P1
 Report: duplicate rate, performance shift, and whether method ranking changes
 ```
 
@@ -648,9 +654,10 @@ Prompt length distribution
 
 Minimum publishable package:
 
-- Main utility table with Fed-SB and FedAvg-LoRA.
-- Ablation table showing why the full method recovers client-side DP utility.
-- Non-LLM context table.
+- Main DP-FL table with FedAvg-LoRA-DP, Fed-SB-style-DP, and SPECTRA-FedCore-DP.
+- Non-DP context table for prompt-only, central/local adapters, and SPECTRA non-DP.
+- Classical IDS context table with Random Forest, XGBoost/LightGBM, and MLP.
+- A0-A5 ablation table showing why the full method recovers client-side DP utility.
 - Duplicate diagnostics and raw-file robustness table.
 - Reproducibility package with fixed seeds, split indices, configs, and privacy ledgers.
 
@@ -658,23 +665,20 @@ Minimum publishable package:
 
 - Random Forest
 - XGBoost or LightGBM
-- FT-Transformer or TabTransformer
-- MLP-FedAvg with and without DP
+- MLP
 
 These are mandatory because Edge-IIoTset is tabular/network-flow data.
 
 ### LLM and Adapter Baselines
 
-Use the same Gemma 4 E2B instruction backbone where possible:
+Use the same Qwen3.5-2B backbone where possible:
 
-- Zero-shot or prompt-only Gemma classifier
+- Zero-shot or prompt-only Qwen3.5 classifier
 - Centralized LoRA
 - Local-only public-spectral core adapter
 - FedAvg-LoRA
 - FFA-LoRA
-- Fed-SB or a faithful reimplementation if compute permits
-- FedASK if implementation budget allows
-- AS-LoRA if implementation budget allows
+- Fed-SB-style fixed-core baseline
 - SPECTRA-FedCore without DP
 - SPECTRA-FedCore without adaptive allocation
 - Full SPECTRA-FedCore
@@ -719,7 +723,7 @@ Statistical reporting:
 
 - Run at least 3 seeds for all main tables.
 - Report mean plus standard deviation.
-- Use paired tests or bootstrap confidence intervals for the main comparison against Fed-SB-budget-matched.
+- Use paired tests or bootstrap confidence intervals for the main comparison against Fed-SB-style fixed-core.
 - For rare attacks, report per-class recall rather than only aggregate macro-F1.
 - Always report the exact privacy accountant variant and RDP order grid.
 
@@ -731,7 +735,7 @@ Core ablations:
 - Uniform `p_l` vs public spectrum-adaptive `p_l`.
 - Uniform noise vs layer-adaptive noise.
 - No local residual vs local residual.
-- No DP vs epsilon in `{8, 4, 2, 1}`.
+- No DP vs epsilon in `{8, 4, 2}`; epsilon `1` is optional.
 - Global clipping vs per-layer clipping.
 - With and without post-processing shrinkage.
 - Main stratified selected-CSV split vs deduplicated sensitivity vs raw per-file 8/1/1 robustness split.
@@ -844,7 +848,7 @@ Suggested section outline:
 Reviewer-facing claim discipline:
 
 - Use "improves the trade-off" instead of "outperforms all baselines" unless the results support the stronger claim.
-- Use "edge-deployable inference" and "edge/near-edge adaptation" instead of implying every client can train Gemma 4 E2B on-device.
+- Use "edge-deployable inference" and "edge/near-edge adaptation" instead of implying every client can train Qwen3.5-2B on-device.
 - Use "client-level DP" consistently unless a DP-SGD record-level variant is implemented.
 - Say "public-spectral construction" rather than "novel square core adapter" as the novelty anchor.
 
@@ -872,7 +876,7 @@ A: The primary protocol intentionally follows common Edge-IIoTset IDS practice: 
 
 Q6: Is the baseline comparison fair?
 
-A: The paper reports same-privacy, same-communication, and same-trainable-parameter regimes, including Fed-SB-original and Fed-SB-budget-matched where feasible.
+A: The paper reports same-privacy, same-communication, and same-trainable-parameter regimes, including the official Fed-SB SNLI reproduction and a controlled Fed-SB-style fixed-core Edge-IIoT baseline where direct adaptation is brittle.
 
 ## 14. Risk Register
 
@@ -891,7 +895,7 @@ Mitigation: Use the mainstream stratified selected-CSV split as the main compara
 Risk 5: Compute budget too high.
 Mitigation: Start with target modules `q_proj` and `v_proj`, p in `{4, 8, 16}`, K=10 or K=20. Expand after first sanity results.
 
-Risk 6: Fed-SB-original is hard to adapt to Gemma 4 E2B or Edge-IIoT prompts.
+Risk 6: Faithful Fed-SB adaptation is hard to adapt to Qwen3.5-2B or Edge-IIoT prompts.
 Mitigation: Keep two baselines: faithful Fed-SB where possible, and Fed-SB-style budget-matched core baseline implemented in the same code path as SPECTRA for controlled comparison.
 
 Risk 7: Client-side DP destroys low-epsilon performance.
@@ -916,8 +920,10 @@ Mitigation: Do not make true scenario-aware claims from the selected CSV. Treat 
 
 ## 16. Sources Checked
 
-- Gemma 4 model overview: https://ai.google.dev/gemma/docs/core
-- Gemma 4 E2B model card: https://huggingface.co/google/gemma-4-E2B
+- Qwen3.5-2B ModelScope model card: https://www.modelscope.ai/models/Qwen/Qwen3.5-2B
+- Qwen3.5-2B Hugging Face mirror: https://huggingface.co/Qwen/Qwen3.5-2B
+- Llama 3.2 edge/mobile release: https://ai.meta.com/blog/llama-3-2-connect-2024-vision-edge-mobile-devices/
+- Gemma 3 1B model card: https://huggingface.co/google/gemma-3-1b-it
 - LoRA-XS: https://arxiv.org/abs/2405.17604
 - PiSSA: https://arxiv.org/abs/2404.02948
 - LoRA original ICLR paper: https://openreview.net/pdf?id=nZeVKeeFYf9
@@ -1102,10 +1108,10 @@ Simulation design:
 ```text
 K = 10 clients
 local_epochs = 1
-rounds = 20 for sanity, 50 for main runs if compute allows
-participation = 100% for debugging, then 20%-50% for reported FL sweeps
+rounds = 5 for debugging, 50 for main runs
+participation = 100% for main reproducibility
 primary non-IID = Dirichlet label-skew, alpha = 0.5
-secondary sensitivity = K = 20 if server time allows
+optional sensitivity = K = 20, participation = 0.5, epsilon = 1
 ```
 
 Client partitions:
@@ -1163,19 +1169,18 @@ Minimum baselines:
    `XGBoost` or `LightGBM`, `Random Forest`, and `MLP`.
 
 2. Central and local adapter context:
-   Central LoRA, local-only LoRA or local-only SPECTRA core, and prompt-only Gemma.
+   Central LoRA, local-only LoRA or local-only SPECTRA core, and prompt-only Qwen3.5.
 
 3. Federated adapter baselines:
-   FedAvg-LoRA and Fed-SB.
+   FedAvg-LoRA and Fed-SB-style fixed-core.
 
 4. DP baselines:
-   FedAvg-LoRA-DP, Fed-SB-DP, and SPECTRA-FedCore-DP.
+   FedAvg-LoRA-DP, Fed-SB-style-DP, and SPECTRA-FedCore-DP.
 
 Optional baselines:
 
 - FedProx-LoRA if FedAvg-LoRA is unstable under label skew.
-- DP-DyLoRA if implementation is straightforward.
-- FedALT or LoRA-FAIR only if code and compute budget make them feasible; otherwise cite them in related work and explain that Fed-SB is the closest communication/DP collision baseline.
+- DP-DyLoRA, FedALT, or LoRA-FAIR only if code and compute budget make them feasible; otherwise cite them in related work and explain that Fed-SB is the closest communication/DP collision baseline.
 
 Fairness regimes:
 
@@ -1190,19 +1195,20 @@ Table 1: Main closed-set FL result.
 
 ```text
 Dataset: ML-EdgeIIoT, 80/10/10 stratified split
-Clients: K=10, IID and Dirichlet alpha=0.5
-Methods: FedAvg-LoRA, Fed-SB, SPECTRA-FedCore
-Privacy: non-DP and epsilon in {8, 4, 2, 1}
+Clients: K=10, Dirichlet alpha=0.5
+Methods: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
+Privacy: epsilon in {8, 4, 2}
 Metrics: macro-F1, rare-attack recall, weighted-F1, uploaded MB/round
 ```
 
-Table 2: Fair controlled comparison.
+Table 2: Non-DP and central/local context.
 
 ```text
-Same epsilon
-Same communication
-Same trainable parameters
-Report macro-F1, rare recall, peak VRAM, wall time
+Prompt-only Qwen3.5-2B
+Central LoRA
+Local-only SPECTRA-Core
+FedAvg-LoRA non-DP
+SPECTRA-Core non-DP
 ```
 
 Table 3: Classical IDS context.
@@ -1211,19 +1217,18 @@ Table 3: Classical IDS context.
 Random Forest
 XGBoost/LightGBM
 MLP
-Central LoRA
-SPECTRA-FedCore non-DP
 ```
 
 Table 4: Ablation.
 
 ```text
-Random basis vs public SVD basis
-Uniform rank vs spectral rank allocation
-Uniform noise vs layer-adaptive noise
-No residual vs local residual
-No shrinkage vs shrinkage
-Compact prompt vs short/broad prompt
+A0 Random orthogonal basis + uniform rank + global DP
+A1 Public SVD basis + uniform rank + global DP
+A2 Public SVD basis + spectral rank + global DP
+A3 Public SVD basis + spectral rank + layer-adaptive DP
+A4 A3 + local residual
+A5 A4 + shrinkage post-processing
+Primary epsilon: 4
 ```
 
 Table 5: Reproducibility and leakage diagnostics.
@@ -1253,7 +1258,7 @@ Figure 3: DP degradation curve.
 
 ```text
 epsilon vs macro-F1
-methods: FedAvg-LoRA-DP, Fed-SB-DP, SPECTRA-FedCore-DP
+methods: FedAvg-LoRA-DP, Fed-SB-style-DP, SPECTRA-FedCore-DP
 ```
 
 Figure 4: Ablation waterfall.
@@ -1305,8 +1310,8 @@ If server time is limited, the minimum publishable package is:
 1. Main selected-ML split with saved indices and duplicate diagnostics.
 2. Classical baselines: Random Forest, XGBoost/LightGBM, MLP.
 3. FedAvg-LoRA and Fed-SB on the same prompt/split.
-4. SPECTRA-FedCore non-DP and DP at epsilon `{8, 4, 2, 1}`.
-5. Ablation of public SVD basis, spectral allocation, adaptive noise, and local residual.
+4. SPECTRA-FedCore non-DP and DP at epsilon `{8, 4, 2}`.
+5. A0-A5 ablation of public SVD basis, spectral allocation, adaptive noise, local residual, and shrinkage.
 6. Communication, trainable parameter, memory, and latency reporting.
 7. Raw per-file 8/1/1 robustness check if compute allows after main tables.
 

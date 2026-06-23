@@ -1,0 +1,10 @@
+We consider a cross-device or cross-silo federated IIoT setting with $K$ simulated gateways. Client $k$ owns a private dataset $\mathcal{D}_k$ of local telemetry records and labels. The server coordinates training but should not receive raw records. The goal is to adapt a frozen small language model backbone into an intrusion-detection assistant that predicts labels for instruction-style prompts derived from telemetry features.
+
+\paragraph{Task.}
+The primary task is fine-grained closed-set classification on \dataset: benign traffic plus fourteen attack classes. Binary classification and threat-family classification are secondary tasks because they are typically less sensitive to rare-class behavior. For each record, a prompt renderer converts a curated set of non-identifier, low-leakage features into a compact instruction. Training supervises only the label answer.
+
+\paragraph{Privacy unit and adversary.}
+The main privacy guarantee is client-level DP for participating client uploads. The server is honest-but-curious: it follows the protocol but may inspect individual updates. Each client clips and noises its upload locally before transmission. We do not claim record-level DP unless local training itself uses per-example clipping and DP-SGD, which is not the main setting in this draft.
+
+\paragraph{Budgets.}
+The method is evaluated under explicit privacy, communication, and trainable-parameter budgets. Let $\epsilon$ and $\delta$ denote the client-level DP budget, $B_{\mathrm{comm}}$ the uploaded scalar or byte budget per client per round, and $B_{\mathrm{param}}$ the trainable adapter-parameter budget. The comparison is fair only when baselines are evaluated under matched budgets rather than only matched nominal LoRA rank.

@@ -127,6 +127,7 @@ Generated Edge-IIoTset summary:
 - Main selected-ML stratified split seed: `20260531`.
 - Main selected-ML split sizes: 126,233 train rows, 15,774 validation rows, 15,793 test rows.
 - Main simulated FL client partition: `K=10`, Dirichlet label-skew `alpha=0.5`, generated from the selected-ML training split.
+- Main paper protocol uses the selected-ML stratified split and K=10 Dirichlet client partition. The source-aware split is a robustness/diagnostic artifact, not the primary Qwen3.5-2B experiment split.
 
 Label normalization currently applied:
 

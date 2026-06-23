@@ -1,0 +1,39 @@
+\subsection{Core-Space Norm Preservation}
+For orthonormal $U_{\ell,p}$ and $V_{\ell,p}$,
+\begin{equation}
+  \norm{U_{\ell,p}(C-\widehat{C})V_{\ell,p}^{\top}}_F
+  =
+  \norm{C-\widehat{C}}_F.
+\end{equation}
+Thus clipping, perturbation, and truncation can be analyzed directly in core coordinates.
+
+\subsection{Expected DP Perturbation}
+If $Z_{\ell}\sim\mathcal{N}(0,s_{\ell}^{2}I_{p_{\ell}\times p_{\ell}})$, then
+\begin{equation}
+  \mathbb{E}\norm{U_{\ell,p}Z_{\ell}V_{\ell,p}^{\top}}_F^2
+  =
+  \mathbb{E}\norm{Z_{\ell}}_F^2
+  =
+  p_{\ell}^{2}s_{\ell}^{2}.
+\end{equation}
+This relationship motivates reducing the number of released coordinates before applying DP noise.
+
+\subsection{Algorithmic Summary}
+\begin{algorithm}[H]
+\caption{\method{} training round}
+\label{alg:spectra_round}
+\begin{algorithmic}[1]
+\Require Public backbone $\{W_\ell^0\}$, global cores $\{G_\ell^{(t)}\}$, clients $\mathcal{I}_t$
+\State Server computes or loads public spectral bases $\{U_{\ell,p},V_{\ell,p}\}$
+\State Server broadcasts $\{G_\ell^{(t)}\}$ and fixed public configuration
+\For{client $k\in\mathcal{I}_t$}
+  \State Train uploadable cores $\{D_{k,\ell}^{(t)}\}$ and local residuals $\{P_{k,\ell}\}$
+  \State Clip uploadable cores globally or per layer
+  \State Add Gaussian noise according to the client-level DP accountant
+  \State Upload privatized core update $\{\widetilde{D}_{k,\ell}^{(t)}\}$
+\EndFor
+\State Server aggregates $\bar{D}_{\ell}^{(t)}=\sum_{k\in\mathcal{I}_t}q_{k,t}\widetilde{D}_{k,\ell}^{(t)}$
+\State Optionally apply post-processing shrinkage $\widehat{D}_{\ell}^{(t)}=\omega_{\ell}\bar{D}_{\ell}^{(t)}$
+\State Update $G_\ell^{(t+1)}=G_\ell^{(t)}+\widehat{D}_{\ell}^{(t)}$
+\end{algorithmic}
+\end{algorithm}

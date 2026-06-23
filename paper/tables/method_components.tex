@@ -1,0 +1,17 @@
+\begin{table}[t]
+\centering
+\caption{Components of \method{} and the reviewer question each component answers.}
+\label{tab:components}
+\begin{tabular}{lll}
+\toprule
+Component & Source of signal & Purpose \\
+\midrule
+Public spectral bases & Public backbone weights & Private-data-free subspace \\
+Core adapter & Trainable $p_\ell^2$ matrices & Small upload and exact aggregation \\
+Rank allocation & Public singular spectra & Edge budget matching \\
+Layer-adaptive DP & Public weights and fixed budgets & Reduce DP utility loss \\
+Local residual & Client-local training only & Personalization without upload \\
+Shrinkage & DP-safe transcript post-processing & Denoise aggregate updates \\
+\bottomrule
+\end{tabular}
+\end{table}

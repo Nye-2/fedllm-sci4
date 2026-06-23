@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\caption{Final Qwen3.5-2B experiment matrix. Results are intentionally left blank until server experiments are complete.}
+\label{tab:experiment_matrix}
+\begin{tabular}{llll}
+\toprule
+Priority & Question & Methods & Key metrics \\
+\midrule
+P0 main & Does \method{} improve DP-FL? & FedAvg-LoRA, Fed-SB-style, \method{} & Macro-F1, rare recall, MB/round \\
+P0 context & What is the non-DP ceiling? & Prompt-only, central/local adapters & F1, VRAM, wall-clock \\
+P0 classical & How strong is tabular IDS? & RF, XGBoost/LightGBM, MLP & F1, latency \\
+P1 ablation & Which component recovers DP utility? & A0--A5 \method{} variants & F1, clipping rate \\
+P1 diagnostics & Are rankings robust? & Main methods & Duplicate rate, F1 shift \\
+P2 optional & What changes under stress? & $K=20$, partial participation, $\epsilon=1$ & F1, stability \\
+\bottomrule
+\end{tabular}
+\end{table*}
