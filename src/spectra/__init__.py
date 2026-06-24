@@ -6,6 +6,7 @@ FedAvg-style aggregation helpers, metrics, and conservative client-level DP acco
 """
 
 from spectra.metrics import classification_metrics
+from spectra.experiment_plan import build_run_specs, load_experiment_config, materialize_run_queue, validate_experiment_inputs
 
 try:
     from spectra.adapter import SpectralCoreAdapter
@@ -32,12 +33,16 @@ __all__ = [
     "build_truncated_svd",
     "calibrate_noise_std",
     "classification_metrics",
+    "build_run_specs",
     "clip_by_l2",
     "compose_gaussian_rdp",
     "flatten_core_state",
     "gaussian_rdp",
     "load_core_state_",
+    "load_experiment_config",
+    "materialize_run_queue",
     "rdp_to_epsilon",
     "retained_energy",
+    "validate_experiment_inputs",
     "weighted_average_updates",
 ]

@@ -402,6 +402,28 @@ Run experiments in this order:
 13. Freeze hyperparameters and launch final three-seed P0/P1 reruns.
 14. Optional secondary WUSTL-IIOT-2021 or ToN_IoT validation only after the main paper tables are stable.
 
+Machine-readable queue setup:
+
+```bash
+python3 scripts/run_experiment_plan.py validate \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --output outputs/edgeiiot_fl_spectra_dp/gate0_validation.json
+
+python3 scripts/run_experiment_plan.py materialize \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --output-dir outputs/edgeiiot_fl_spectra_dp/run_queue
+```
+
+The materialized queue writes one `config_resolved.json` per run plus a `RUNBOOK.md`. Each run should first be prepared with:
+
+```bash
+python3 scripts/run_single_experiment.py \
+  --run-config outputs/edgeiiot_fl_spectra_dp/run_queue/runs/<run_id>/config_resolved.json \
+  --prepare-only
+```
+
+This creates `runner_request.json`. The GPU runner reads that file and writes real metrics only after the experiment finishes.
+
 ## 11. Per-Run Artifact Contract
 
 Every run must write:

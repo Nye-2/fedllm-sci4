@@ -83,6 +83,20 @@
     "classical_baselines": ["random_forest", "xgboost_or_lightgbm", "mlp"],
     "p2_optional": ["K20_sensitivity", "participation_0.5", "epsilon_1", "wustl_iiot_2021_external", "cross_backbone_check"]
   },
+  "run_groups": {
+    "p0_dp_main": [
+      "fedavg_lora_dp_dplora_style",
+      "fedsb_style_fixed_core_dp",
+      "spectra_fedcore_dp"
+    ],
+    "p0_context": [
+      "prompt_only_qwen35",
+      "central_lora",
+      "local_only_spectra_core",
+      "fedavg_lora",
+      "spectra_core_non_dp"
+    ]
+  },
   "metrics": {
     "primary": "macro_f1",
     "report": [

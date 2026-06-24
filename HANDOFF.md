@@ -1,9 +1,9 @@
 # SPECTRA-FedCore 服务器交接文档
 
 > **收件人**：龙虾（服务器端实验负责人）  
-> **日期**：2026-06-23  
+> **日期**：2026-06-24
 > **仓库**：https://github.com/JunzeCai/fedllm-sci4  
-> **项目状态**：数据准备层已完成；主实验方案已固定为 Qwen3.5-2B；核心训练框架待实现  
+> **项目状态**：数据准备层和实验调度层已完成；主实验方案已固定为 Qwen3.5-2B；GPU 训练 runner 待服务器端接入
 
 ---
 
@@ -30,6 +30,8 @@
 | **数据产物** | ✅ | `data/processed/` 下已生成清单、标签清单、提示样本、selected-ML 80/10/10 split、K=10 Dirichlet client partition |
 | **Fed-SB 基线代码** | ✅ | 已克隆到 `data/external/fed-sb/`，commit `e9e64982`，SNLI 已 symlink 到官方位置 |
 | **数据集准备 CLI** | ✅ | `scripts/prepare_datasets.py` 可一键重新生成所有产物 |
+| **实验调度 CLI** | ✅ | `scripts/run_experiment_plan.py` 可 validate/materialize；`scripts/run_single_experiment.py --prepare-only` 可生成 per-run runner contract |
+| **服务器执行计划** | ✅ | `docs/superpowers/plans/2026-06-24-server-experiment-execution-plan.md`，给后续 agent 的逐步执行手册 |
 
 ### ⏳ 待实现（接下来的关键路径）
 
@@ -37,7 +39,7 @@
 |---|---|---|---|
 | **P0** | 复现 Fed-SB 官方 SNLI 隐私联邦实验 | 1-2 天 | 服务器 GPU 环境 |
 | **P0** | 加载 Qwen3.5-2B 并 inspect 可挂载目标模块 | 0.5 天 | 需要 transformers/modelscope 环境 |
-| **P0** | 把 `src/spectra/` 数学核心接入 PyTorch/PEFT 训练层 | 2-3 天 | 需要服务器 GPU 环境 |
+| **P0** | 按 `runner_request.json` 把 `src/spectra/` 数学核心接入 PyTorch/PEFT 训练 runner | 2-3 天 | 需要服务器 GPU 环境 |
 | **P0** | 实现单服务器训练循环（K=10，IID sanity + Dirichlet Non-IID） | 2-3 天 | 基础 client partition artifact 已生成 |
 | **P0** | 跑主实验：FedAvg-LoRA-DP/DP-LoRA-style、Fed-SB-style-DP、SPECTRA-FedCore-DP | 3-5 天 | 依赖训练层和 DP upload path |
 | **P1** | A0-A5 消融：谱基、rank、噪声、本地残差、shrinkage | 3-5 天 | 先固定 epsilon=4 |
@@ -82,6 +84,8 @@ fedllm-sci4/
 │
 ├── scripts/
 │   ├── prepare_datasets.py             # 数据集准备 CLI
+│   ├── run_experiment_plan.py          # validate/materialize 实验队列
+│   ├── run_single_experiment.py        # per-run prepare-only runner contract
 │   ├── run_fedsb_snli_fed_private.sh   # Fed-SB 联邦隐私复现脚本
 │   └── run_fedsb_snli_central_private.sh # Fed-SB 集中式隐私复现脚本
 │
@@ -96,6 +100,7 @@ fedllm-sci4/
 │   ├── adapter.py                      # SpectralCoreAdapter, Delta W = U C V^T
 │   ├── privacy.py                      # client-level Gaussian RDP accountant
 │   ├── fl.py                           # core flatten/load, weighted aggregation
+│   ├── experiment_plan.py              # run queue、输入校验、per-run config materialization
 │   └── metrics.py                      # macro-F1, balanced accuracy, rare recall
 │
 └── tests/                              # 17 个 pytest 测试
@@ -138,11 +143,68 @@ pip install scikit-learn xgboost lightgbm  # 非 LLM 基线
 ### 4.3 验证数据准备层
 
 ```bash
-python -m compileall src scripts
-python -m pytest -q
+python3 -m compileall src scripts
+python3 -m pytest -q
 ```
 
 **期望输出**：全部测试通过；如有环境依赖缺失导致 skip，需要在服务器日志中说明。
+
+### 4.3.1 验证并生成实验队列
+
+先做 Gate 0 输入验证：
+
+```bash
+python3 scripts/run_experiment_plan.py validate \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --output outputs/edgeiiot_fl_spectra_dp/gate0_validation.json
+```
+
+如果服务器已经放好了原始数据，再加严格检查：
+
+```bash
+python3 scripts/run_experiment_plan.py validate \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --strict-raw-data \
+  --output outputs/edgeiiot_fl_spectra_dp/gate0_validation_strict.json
+```
+
+生成 one-seed 主实验队列：
+
+```bash
+python3 scripts/run_experiment_plan.py materialize \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --output-dir outputs/edgeiiot_fl_spectra_dp/run_queue
+```
+
+生成后的关键文件：
+
+```text
+outputs/edgeiiot_fl_spectra_dp/run_queue/run_queue.jsonl
+outputs/edgeiiot_fl_spectra_dp/run_queue/RUNBOOK.md
+outputs/edgeiiot_fl_spectra_dp/run_queue/runs/<run_id>/config_resolved.json
+outputs/edgeiiot_fl_spectra_dp/run_queue/runs/<run_id>/status.json
+```
+
+准备每个 run 的 runner contract：
+
+```bash
+while read -r line; do
+  python3 - <<'PY' "$line"
+import json, subprocess, sys
+record = json.loads(sys.argv[1])
+subprocess.run(record["command"].split(), check=True)
+PY
+done < outputs/edgeiiot_fl_spectra_dp/run_queue/run_queue.jsonl
+```
+
+这一步会为每个 run 写出：
+
+```text
+runner_request.json
+status.json  # status = ready_for_runner
+```
+
+注意：`run_single_experiment.py --prepare-only` 不会写 `metrics.json`，也不会伪造结果。真正训练 runner 必须读取 `runner_request.json`，完成训练和评估后再写真实结果。
 
 ### 4.4 数据集准备
 
@@ -385,8 +447,8 @@ epsilon sweep = {8, 4, 2}; epsilon=1 optional
 
 1. **跑通基础测试**：
    ```bash
-   python -m compileall src scripts
-   python -m pytest -q
+   python3 -m compileall src scripts
+   python3 -m pytest -q
    ```
 2. **复现 Fed-SB SNLI 联邦隐私实验**：
    ```bash
@@ -394,6 +456,17 @@ epsilon sweep = {8, 4, 2}; epsilon=1 optional
    ```
    目的：验证 Fed-SB 代码在服务器 GPU 上能跑通、验证隐私会计路径、记录基线性能。
 3. **确认 Edge-IIoTset 数据完整性**：核对 `data/raw/edgeiiotset/full/` 下有 14 attack + 10 normal + 2 selected CSV，总约 26 个文件。
+4. **生成实验队列和 runner contract**：
+   ```bash
+   python3 scripts/run_experiment_plan.py validate \
+     --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+     --strict-raw-data \
+     --output outputs/edgeiiot_fl_spectra_dp/gate0_validation_strict.json
+
+   python3 scripts/run_experiment_plan.py materialize \
+     --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+     --output-dir outputs/edgeiiot_fl_spectra_dp/run_queue
+   ```
 
 ### 阶段 2：Qwen3.5-2B 接入与最小冒烟（第 3-6 天）
 
@@ -469,6 +542,17 @@ preprocessing_fingerprint.json
 budget_match.json
 run.log
 ```
+
+调度层会先生成 `runner_request.json`，其中 `runner_contract.expected_runner` 目前有四类：
+
+```text
+qwen_peft_federated    # DP-FL 主方法、Fed-SB-style-DP、A0-A5 消融
+qwen_peft_or_prompt    # prompt-only、central/local/non-DP adapter context
+classical_tabular      # RF、XGBoost/LightGBM、MLP
+protocol_extension     # P2 可选扩展
+```
+
+服务器端真正训练代码必须读取 `runner_request.json`，并且只在真实训练/评估完成后写 `metrics.json`。不要写占位 metrics，不要把 prepare-only 状态当作实验完成。
 
 ### 阶段 4：P1 消融与诊断（第 17-25 天）
 

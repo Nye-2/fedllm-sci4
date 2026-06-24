@@ -13,6 +13,7 @@ Every server run should export a JSON or JSONL record with these fields so table
 - `baseline_source`
 - `budget_match_group`
 - `budget_match_type`
+- `runner_request_path`
 - `backbone`
 - `model_source`
 - `modelscope_id`

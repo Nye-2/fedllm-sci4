@@ -7,9 +7,12 @@ The repository is currently structured to make the server handoff reproducible b
 - `src/fedllm_data/`: dataset manifests, label normalization, selected-CSV split generation, prompt smoke samples, and client partitions.
 - `src/spectra/`: CPU-testable NumPy core utilities for public SVD bases, spectral core adapters, client-side Gaussian release accounting, FL aggregation, and metrics.
 - `scripts/prepare_datasets.py`: regenerates portable dataset artifacts.
+- `scripts/run_experiment_plan.py`: validates server inputs and materializes the exact run queue from the paper protocol.
+- `scripts/run_single_experiment.py`: prepares one materialized run directory and writes the runner contract for the server-side trainer.
 - `HANDOFF.md`: server execution guide.
 - `docs/superpowers/specs/2026-05-31-spectra-dp-fedcore-design.md`: paper-level design.
 - `docs/superpowers/plans/2026-06-23-qwen35-final-experiment-plan.md`: final Qwen3.5-2B experiment protocol.
+- `docs/superpowers/plans/2026-06-24-server-experiment-execution-plan.md`: server-side execution plan for another agent.
 
 ## Quick Check
 
@@ -18,9 +21,31 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
 pip install -e ".[dev]"
-python -m compileall src scripts
-pytest -q
+python3 -m compileall src scripts
+python3 -m pytest -q
 ```
+
+## Server Experiment Queue
+
+After data is in place, a server-side agent should start with:
+
+```bash
+python3 scripts/run_experiment_plan.py validate \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --output outputs/edgeiiot_fl_spectra_dp/gate0_validation.json
+
+python3 scripts/run_experiment_plan.py materialize \
+  --config configs/experiments/edgeiiot_fl_spectra_dp.json \
+  --output-dir outputs/edgeiiot_fl_spectra_dp/run_queue
+```
+
+This writes:
+
+- `outputs/edgeiiot_fl_spectra_dp/run_queue/run_queue.jsonl`
+- `outputs/edgeiiot_fl_spectra_dp/run_queue/RUNBOOK.md`
+- `outputs/edgeiiot_fl_spectra_dp/run_queue/runs/<run_id>/config_resolved.json`
+
+Each queue command runs `scripts/run_single_experiment.py --prepare-only`, which creates `runner_request.json`. The GPU runner must then write the required real artifacts; it must not write placeholder `metrics.json`.
 
 ## Data Preparation
 
